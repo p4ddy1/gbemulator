@@ -53,7 +53,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "INC BC",
             handler: |cpu: &mut Cpu| {
                 let mut value = binary::bytes_to_word(cpu.registers.b, cpu.registers.c);
-                value += 1;
+                value = value.wrapping_add(1);
                 let (byte1, byte2) = binary::word_to_bytes(value);
                 cpu.registers.b = byte1;
                 cpu.registers.c = byte2;
@@ -87,6 +87,30 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "LD B,n",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.b = cpu.get_attribute_for_op_code(0);
+                Result::None
+            },
+        }),
+        0x07 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "RLCA",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = rotate_left(cpu, cpu.registers.a);
+                Result::None
+            },
+        }),
+        0x08 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD aa,SP",
+            handler: |cpu: &mut Cpu| {
+                let addr = bytes_to_word(
+                    cpu.get_attribute_for_op_code(1),
+                    cpu.get_attribute_for_op_code(0),
+                );
+                cpu.mmu.write_word(addr, cpu.registers.sp);
                 Result::None
             },
         }),
@@ -134,6 +158,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x0C => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "INC C",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.c = increment_byte(cpu, cpu.registers.c);
+                Result::None
+            },
+        }),
         0x0D => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -151,26 +185,6 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "LD C,n",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.c = cpu.get_attribute_for_op_code(0);
-                Result::None
-            },
-        }),
-        0x0C => Some(&Instruction {
-            length: 1,
-            clock_cycles: 4,
-            clock_cycles_condition: None,
-            description: "INC C",
-            handler: |cpu: &mut Cpu| {
-                cpu.registers.c = increment_byte(cpu, cpu.registers.c);
-                Result::None
-            },
-        }),
-        0x07 => Some(&Instruction {
-            length: 1,
-            clock_cycles: 4,
-            clock_cycles_condition: None,
-            description: "RLCA",
-            handler: |cpu: &mut Cpu| {
-                cpu.registers.a = rotate_left(cpu, cpu.registers.a);
                 Result::None
             },
         }),
@@ -198,34 +212,6 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
-        0x14 => Some(&Instruction {
-            length: 1,
-            clock_cycles: 4,
-            clock_cycles_condition: None,
-            description: "INC D",
-            handler: |cpu: &mut Cpu| {
-                cpu.registers.d = increment_byte(cpu, cpu.registers.d);
-                Result::None
-            },
-        }),
-        0x19 => Some(&Instruction {
-            length: 1,
-            clock_cycles: 8,
-            clock_cycles_condition: None,
-            description: "ADD HL,DE",
-            handler: |cpu: &mut Cpu| {
-                let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                let d_e = bytes_to_word(cpu.registers.d, cpu.registers.e);
-
-                let result = add_words(cpu, h_l, d_e);
-                let (byte1, byte2) = word_to_bytes(result);
-
-                cpu.registers.h = byte1;
-                cpu.registers.l = byte2;
-
-                Result::None
-            },
-        }),
         0x13 => Some(&Instruction {
             length: 1,
             clock_cycles: 8,
@@ -233,10 +219,20 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "INC DE",
             handler: |cpu: &mut Cpu| {
                 let mut value = binary::bytes_to_word(cpu.registers.d, cpu.registers.e);
-                value += 1;
+                value = value.wrapping_add(1);
                 let (byte1, byte2) = binary::word_to_bytes(value);
                 cpu.registers.d = byte1;
                 cpu.registers.e = byte2;
+                Result::None
+            },
+        }),
+        0x14 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "INC D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.d = increment_byte(cpu, cpu.registers.d);
                 Result::None
             },
         }),
@@ -277,6 +273,24 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "JR r8",
             handler: |cpu: &mut Cpu| {
                 jump_to_attribute_address(cpu);
+                Result::None
+            },
+        }),
+        0x19 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "ADD HL,DE",
+            handler: |cpu: &mut Cpu| {
+                let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
+                let d_e = bytes_to_word(cpu.registers.d, cpu.registers.e);
+
+                let result = add_words(cpu, h_l, d_e);
+                let (byte1, byte2) = word_to_bytes(result);
+
+                cpu.registers.h = byte1;
+                cpu.registers.l = byte2;
+
                 Result::None
             },
         }),
@@ -336,6 +350,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        //TODO: 0x1F
         0x20 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -367,7 +382,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             handler: |cpu: &mut Cpu| {
                 let mut value = binary::bytes_to_word(cpu.registers.h, cpu.registers.l);
                 cpu.mmu.write(value, cpu.registers.a);
-                value += 1;
+                value = value.wrapping_add(1);
                 let (byte1, byte2) = binary::word_to_bytes(value);
                 cpu.registers.h = byte1;
                 cpu.registers.l = byte2;
@@ -381,7 +396,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "INC HL",
             handler: |cpu: &mut Cpu| {
                 let mut value = binary::bytes_to_word(cpu.registers.h, cpu.registers.l);
-                value += 1;
+                value = value.wrapping_add(1);
                 let (byte1, byte2) = binary::word_to_bytes(value);
                 cpu.registers.h = byte1;
                 cpu.registers.l = byte2;
@@ -395,6 +410,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "INC H",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.h = increment_byte(cpu, cpu.registers.h);
+                Result::None
+            },
+        }),
+        0x25 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "DEC H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.h = decrement_byte(cpu, cpu.registers.h);
                 Result::None
             },
         }),
@@ -427,15 +452,20 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
-        0x30 => Some(&Instruction {
-            length: 2,
+        0x29 => Some(&Instruction {
+            length: 1,
             clock_cycles: 8,
-            clock_cycles_condition: Some(12),
-            description: "JR NZ,r8",
+            clock_cycles_condition: None,
+            description: "ADD HL,HL",
             handler: |cpu: &mut Cpu| {
-                if jump_on_flag_reset(cpu, Flag::C) {
-                    return Result::ActionTaken;
-                }
+                let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
+
+                let result = add_words(cpu, h_l, h_l);
+                let (byte1, byte2) = word_to_bytes(result);
+
+                cpu.registers.h = byte1;
+                cpu.registers.l = byte2;
+
                 Result::None
             },
         }),
@@ -447,13 +477,14 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             handler: |cpu: &mut Cpu| {
                 let mut value = bytes_to_word(cpu.registers.h, cpu.registers.l);
                 cpu.registers.a = cpu.mmu.read(value);
-                value += 1;
+                value = value.wrapping_add(1);
                 let (byte1, byte2) = word_to_bytes(value);
                 cpu.registers.h = byte1;
                 cpu.registers.l = byte2;
                 Result::None
             },
         }),
+        //TODO: 0x2B
         0x2C => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -496,6 +527,18 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x30 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: Some(12),
+            description: "JR NZ,r8",
+            handler: |cpu: &mut Cpu| {
+                if jump_on_flag_reset(cpu, Flag::C) {
+                    return Result::ActionTaken;
+                }
+                Result::None
+            },
+        }),
         0x31 => Some(&Instruction {
             length: 3,
             clock_cycles: 12,
@@ -521,6 +564,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 let (byte1, byte2) = binary::word_to_bytes(value);
                 cpu.registers.h = byte1;
                 cpu.registers.l = byte2;
+                Result::None
+            },
+        }),
+        0x33 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "INC SP",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.sp = cpu.registers.sp + 1;
                 Result::None
             },
         }),
@@ -559,6 +612,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        //TODO: 0x37
         0x38 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -571,6 +625,23 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x39 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "ADD HL,SP",
+            handler: |cpu: &mut Cpu| {
+                let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
+
+                let result = add_words(cpu, h_l, cpu.registers.sp);
+                let (byte1, byte2) = word_to_bytes(result);
+
+                cpu.registers.h = byte1;
+                cpu.registers.l = byte2;
+
+                Result::None
+            },
+        }),
         0x3A => Some(&Instruction {
             length: 1,
             clock_cycles: 8,
@@ -579,10 +650,20 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             handler: |cpu: &mut Cpu| {
                 let mut value = bytes_to_word(cpu.registers.h, cpu.registers.l);
                 cpu.registers.a = cpu.mmu.read(value);
-                value -= 1;
+                value = value.wrapping_sub(1);
                 let (byte1, byte2) = word_to_bytes(value);
                 cpu.registers.h = byte1;
                 cpu.registers.l = byte2;
+                Result::None
+            },
+        }),
+        0x3B => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "DEC SP",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.sp = cpu.registers.sp.wrapping_sub(1);
                 Result::None
             },
         }),
@@ -616,6 +697,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        //TODO: 0x3F
         0x40 => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -623,6 +705,56 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "LD B,B",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.b = cpu.registers.b;
+                Result::None
+            },
+        }),
+        0x41 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD B,C",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.b = cpu.registers.c;
+                Result::None
+            },
+        }),
+        0x42 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD B,D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.b = cpu.registers.d;
+                Result::None
+            },
+        }),
+        0x43 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD B,E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.b = cpu.registers.e;
+                Result::None
+            },
+        }),
+        0x44 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD B,H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.b = cpu.registers.h;
+                Result::None
+            },
+        }),
+        0x45 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD B,L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.b = cpu.registers.l;
                 Result::None
             },
         }),
@@ -647,6 +779,66 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x48 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD C,B",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.c = cpu.registers.b;
+                Result::None
+            },
+        }),
+        0x49 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD C,C",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.c = cpu.registers.c;
+                Result::None
+            },
+        }),
+        0x4A => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD C,D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.c = cpu.registers.d;
+                Result::None
+            },
+        }),
+        0x4B => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD C,E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.c = cpu.registers.e;
+                Result::None
+            },
+        }),
+        0x4C => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD C,H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.c = cpu.registers.h;
+                Result::None
+            },
+        }),
+        0x4D => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD C,L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.c = cpu.registers.l;
+                Result::None
+            },
+        }),
         0x4E => Some(&Instruction {
             length: 1,
             clock_cycles: 8,
@@ -668,6 +860,46 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x50 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD D,B",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.d = cpu.registers.b;
+                Result::None
+            },
+        }),
+        0x51 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD D,C",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.d = cpu.registers.c;
+                Result::None
+            },
+        }),
+        0x52 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD D,D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.d = cpu.registers.d;
+                Result::None
+            },
+        }),
+        0x53 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD D,E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.d = cpu.registers.e;
+                Result::None
+            },
+        }),
         0x54 => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -675,6 +907,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "LD D,H",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.d = cpu.registers.h;
+                Result::None
+            },
+        }),
+        0x55 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD D,L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.d = cpu.registers.l;
                 Result::None
             },
         }),
@@ -696,6 +938,56 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "LD D,A",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.d = cpu.registers.a;
+                Result::None
+            },
+        }),
+        0x58 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD E,B",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.e = cpu.registers.b;
+                Result::None
+            },
+        }),
+        0x59 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD E,C",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.e = cpu.registers.c;
+                Result::None
+            },
+        }),
+        0x5A => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD E,D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.e = cpu.registers.d;
+                Result::None
+            },
+        }),
+        0x5B => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD E,E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.e = cpu.registers.e;
+                Result::None
+            },
+        }),
+        0x5C => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD E,H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.e = cpu.registers.h;
                 Result::None
             },
         }),
@@ -760,6 +1052,47 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x63 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD H,E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.h = cpu.registers.e;
+                Result::None
+            },
+        }),
+        0x64 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD H,H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.h = cpu.registers.h;
+                Result::None
+            },
+        }),
+        0x65 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD H,L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.h = cpu.registers.l;
+                Result::None
+            },
+        }),
+        0x66 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD H,(HL)",
+            handler: |cpu: &mut Cpu| {
+                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
+                cpu.registers.h = cpu.mmu.read(addr);
+                Result::None
+            },
+        }),
         0x67 => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -770,6 +1103,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x68 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD L,B",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.l = cpu.registers.b;
+                Result::None
+            },
+        }),
         0x69 => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -777,6 +1120,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "LD L,C",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.l = cpu.registers.c;
+                Result::None
+            },
+        }),
+        0x6A => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD L,D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.l = cpu.registers.d;
                 Result::None
             },
         }),
@@ -800,6 +1153,27 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x6D => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD L,L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.l = cpu.registers.l;
+                Result::None
+            },
+        }),
+        0x6E => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD L,(HL)",
+            handler: |cpu: &mut Cpu| {
+                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
+                cpu.registers.l = cpu.mmu.read(addr);
+                Result::None
+            },
+        }),
         0x6F => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -810,6 +1184,85 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x70 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD (HL),B",
+            handler: |cpu: &mut Cpu| {
+                cpu.mmu.write(
+                    binary::bytes_to_word(cpu.registers.h, cpu.registers.l),
+                    cpu.registers.b,
+                );
+                Result::None
+            },
+        }),
+        0x71 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD (HL),C",
+            handler: |cpu: &mut Cpu| {
+                cpu.mmu.write(
+                    binary::bytes_to_word(cpu.registers.h, cpu.registers.l),
+                    cpu.registers.c,
+                );
+                Result::None
+            },
+        }),
+        0x72 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD (HL),D",
+            handler: |cpu: &mut Cpu| {
+                cpu.mmu.write(
+                    binary::bytes_to_word(cpu.registers.h, cpu.registers.l),
+                    cpu.registers.d,
+                );
+                Result::None
+            },
+        }),
+        0x73 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD (HL),E",
+            handler: |cpu: &mut Cpu| {
+                cpu.mmu.write(
+                    binary::bytes_to_word(cpu.registers.h, cpu.registers.l),
+                    cpu.registers.e,
+                );
+                Result::None
+            },
+        }),
+        0x74 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD (HL),H",
+            handler: |cpu: &mut Cpu| {
+                cpu.mmu.write(
+                    binary::bytes_to_word(cpu.registers.h, cpu.registers.l),
+                    cpu.registers.h,
+                );
+                Result::None
+            },
+        }),
+        0x75 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD (HL),L",
+            handler: |cpu: &mut Cpu| {
+                cpu.mmu.write(
+                    binary::bytes_to_word(cpu.registers.h, cpu.registers.l),
+                    cpu.registers.l,
+                );
+                Result::None
+            },
+        }),
+        //TODO: 0x76
         0x77 => Some(&Instruction {
             length: 1,
             clock_cycles: 8,
@@ -853,16 +1306,6 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
-        0x7D => Some(&Instruction {
-            length: 1,
-            clock_cycles: 4,
-            clock_cycles_condition: None,
-            description: "LD A,L",
-            handler: |cpu: &mut Cpu| {
-                cpu.registers.a = cpu.registers.l;
-                Result::None
-            },
-        }),
         0x7B => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -883,6 +1326,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x7D => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD A,L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = cpu.registers.l;
+                Result::None
+            },
+        }),
         0x7E => Some(&Instruction {
             length: 1,
             clock_cycles: 8,
@@ -892,6 +1345,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 cpu.registers.a = cpu
                     .mmu
                     .read(bytes_to_word(cpu.registers.h, cpu.registers.l));
+                Result::None
+            },
+        }),
+        0x7F => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "LD A,A",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = cpu.registers.l;
                 Result::None
             },
         }),
