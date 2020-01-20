@@ -1,3 +1,4 @@
+use crate::io::joypad::Joypad;
 use crate::util::binary;
 use crate::Cartridge;
 use crate::Gpu;
@@ -39,7 +40,7 @@ pub struct Mmu<'a> {
     interrupts_enabled: u8,
     interrupt_flags: u8,
     is_booted: bool,
-    keypad: u8,
+    pub joypad: &'a mut Joypad,
 }
 
 impl<'a> Mmu<'a> {
@@ -47,6 +48,7 @@ impl<'a> Mmu<'a> {
         cartridge: &'a Cartridge,
         gpu: &'a mut Gpu<'a>,
         bios: Option<&'a Cartridge>,
+        joypad: &'a mut Joypad,
     ) -> Mmu<'a> {
         Mmu {
             cartridge,
@@ -61,7 +63,7 @@ impl<'a> Mmu<'a> {
             interrupts_enabled: 0,
             interrupt_flags: 0,
             is_booted: false,
-            keypad: 0xFF,
+            joypad: joypad,
         }
     }
 
@@ -87,8 +89,7 @@ impl<'a> Mmu<'a> {
             //TODO: What is 0xFF7E
             IO_ADDRESS..=0xFF7E => {
                 if address == 0xFF00 {
-                    //Implement Keypad
-                    self.keypad = value;
+                    self.joypad.select_keys_by_write(value);
                 }
 
                 if address == 0xFF40 {
@@ -170,7 +171,11 @@ impl<'a> Mmu<'a> {
             IO_ADDRESS..=0xFF7E => {
                 if address == 0xFF00 {
                     //Implement Keypad
-                    return 0xFF;
+                    return self.joypad.read_input();
+                }
+
+                if address == 0xFF04 {
+                    return 0x1B;
                 }
 
                 if address == 0xFF40 {

@@ -16,3 +16,7 @@ pub fn is_bit_set(byte: u8, index: u8) -> bool {
 pub fn reset_bit_in_byte(byte: u8, bit_index: u8) -> u8 {
     byte & ((1 << bit_index) ^ 0xFF)
 }
+
+pub fn set_bit_in_byte(byte: u8, bit_index: u8) -> u8 {
+    byte | 1 << bit_index
+}

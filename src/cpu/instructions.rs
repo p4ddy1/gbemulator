@@ -1,7 +1,9 @@
 use crate::cpu::registers::Flag;
 use crate::memory::mmu::Opcode;
 use crate::util::binary;
-use crate::util::binary::{bytes_to_word, is_bit_set, reset_bit_in_byte, word_to_bytes};
+use crate::util::binary::{
+    bytes_to_word, is_bit_set, reset_bit_in_byte, set_bit_in_byte, word_to_bytes,
+};
 use crate::Cpu;
 
 pub enum Result {
@@ -484,7 +486,20 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
-        //TODO: 0x2B
+        0x2B => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "DEC HL",
+            handler: |cpu: &mut Cpu| {
+                let mut value = bytes_to_word(cpu.registers.h, cpu.registers.l);
+                value -= 1;
+                let (byte1, byte2) = word_to_bytes(value);
+                cpu.registers.h = byte1;
+                cpu.registers.l = byte2;
+                Result::None
+            },
+        }),
         0x2C => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -845,8 +860,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "LD C,(HL)",
             handler: |cpu: &mut Cpu| {
-                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                cpu.registers.c = cpu.mmu.read(addr);
+                cpu.registers.c = read_hl_addr(cpu);
                 Result::None
             },
         }),
@@ -926,8 +940,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "LD D,(HL)",
             handler: |cpu: &mut Cpu| {
-                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                cpu.registers.d = cpu.mmu.read(addr);
+                cpu.registers.d = read_hl_addr(cpu);
                 Result::None
             },
         }),
@@ -1007,8 +1020,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "LD E,(HL)",
             handler: |cpu: &mut Cpu| {
-                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                cpu.registers.e = cpu.mmu.read(addr);
+                cpu.registers.e = read_hl_addr(cpu);
                 Result::None
             },
         }),
@@ -1088,8 +1100,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "LD H,(HL)",
             handler: |cpu: &mut Cpu| {
-                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                cpu.registers.h = cpu.mmu.read(addr);
+                cpu.registers.h = read_hl_addr(cpu);
                 Result::None
             },
         }),
@@ -1169,8 +1180,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "LD L,(HL)",
             handler: |cpu: &mut Cpu| {
-                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                cpu.registers.l = cpu.mmu.read(addr);
+                cpu.registers.l = read_hl_addr(cpu);
                 Result::None
             },
         }),
@@ -1342,9 +1352,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "LD A,(HL)",
             handler: |cpu: &mut Cpu| {
-                cpu.registers.a = cpu
-                    .mmu
-                    .read(bytes_to_word(cpu.registers.h, cpu.registers.l));
+                cpu.registers.a = read_hl_addr(cpu);
                 Result::None
             },
         }),
@@ -1368,6 +1376,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x82 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADD A,D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = add_bytes(cpu, cpu.registers.a, cpu.registers.d);
+                Result::None
+            },
+        }),
         0x85 => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -1384,8 +1402,7 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "ADD A,(HL)",
             handler: |cpu: &mut Cpu| {
-                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                cpu.registers.a = add_bytes(cpu, cpu.registers.a, cpu.mmu.read(addr));
+                cpu.registers.a = add_bytes(cpu, cpu.registers.a, read_hl_addr(cpu));
                 Result::None
             },
         }),
@@ -1409,14 +1426,63 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x8A => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADC A,D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = add_bytes_carry(cpu, cpu.registers.a, cpu.registers.d);
+                Result::None
+            },
+        }),
+        0x8B => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADC A,E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = add_bytes_carry(cpu, cpu.registers.a, cpu.registers.e);
+                Result::None
+            },
+        }),
+        0x8C => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADC A,H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = add_bytes_carry(cpu, cpu.registers.a, cpu.registers.h);
+                Result::None
+            },
+        }),
+        0x8D => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADC A,L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = add_bytes_carry(cpu, cpu.registers.a, cpu.registers.l);
+                Result::None
+            },
+        }),
         0x8E => Some(&Instruction {
             length: 1,
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "ADC A,(HL)",
             handler: |cpu: &mut Cpu| {
-                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                cpu.registers.a = add_bytes_carry(cpu, cpu.registers.a, cpu.mmu.read(addr));
+                cpu.registers.a = add_bytes_carry(cpu, cpu.registers.a, read_hl_addr(cpu));
+                Result::None
+            },
+        }),
+        0x8F => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADC A,A",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = add_bytes_carry(cpu, cpu.registers.a, cpu.registers.a);
                 Result::None
             },
         }),
@@ -1427,6 +1493,156 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "SUB B",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.a = substract_byte(cpu, cpu.registers.a, cpu.registers.b);
+                Result::None
+            },
+        }),
+        0x91 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SUB C",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_byte(cpu, cpu.registers.a, cpu.registers.c);
+                Result::None
+            },
+        }),
+        0x92 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SUB D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_byte(cpu, cpu.registers.a, cpu.registers.d);
+                Result::None
+            },
+        }),
+        0x93 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SUB E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_byte(cpu, cpu.registers.a, cpu.registers.e);
+                Result::None
+            },
+        }),
+        0x94 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SUB H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_byte(cpu, cpu.registers.a, cpu.registers.h);
+                Result::None
+            },
+        }),
+        0x95 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SUB L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_byte(cpu, cpu.registers.a, cpu.registers.l);
+                Result::None
+            },
+        }),
+        0x96 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "SUB (HL)",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_byte(cpu, cpu.registers.a, read_hl_addr(cpu));
+                Result::None
+            },
+        }),
+        0x97 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SUB A",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_byte(cpu, cpu.registers.a, cpu.registers.a);
+                Result::None
+            },
+        }),
+        0x98 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SBC A,B",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.b);
+                Result::None
+            },
+        }),
+        0x99 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SBC A,C",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.c);
+                Result::None
+            },
+        }),
+        0x9A => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SBC A,D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.d);
+                Result::None
+            },
+        }),
+        0x9B => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SBC A,E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.e);
+                Result::None
+            },
+        }),
+        0x9C => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SBC A,H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.h);
+                Result::None
+            },
+        }),
+        0x9D => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SBC A,L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.l);
+                Result::None
+            },
+        }),
+        0x9E => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "SBC A,(HL)",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_bytes_carry(cpu, cpu.registers.a, read_hl_addr(cpu));
+                Result::None
+            },
+        }),
+        0x9F => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SBC A,A",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.a);
                 Result::None
             },
         }),
@@ -1487,6 +1703,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "AND L",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.a = and_bytes(cpu, cpu.registers.a, cpu.registers.l);
+                Result::None
+            },
+        }),
+        0xA6 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "AND (HL)",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = and_bytes(cpu, cpu.registers.a, read_hl_addr(cpu));
                 Result::None
             },
         }),
@@ -1560,6 +1786,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0xAE => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "XOR (HL)",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = xor_bytes(cpu, cpu.registers.a, read_hl_addr(cpu));
+                Result::None
+            },
+        }),
         0xAF => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -1587,6 +1823,56 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "OR C",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.a = or_bytes(cpu, cpu.registers.a, cpu.registers.c);
+                Result::None
+            },
+        }),
+        0xB2 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "OR D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = or_bytes(cpu, cpu.registers.a, cpu.registers.d);
+                Result::None
+            },
+        }),
+        0xB3 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "OR E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = or_bytes(cpu, cpu.registers.a, cpu.registers.e);
+                Result::None
+            },
+        }),
+        0xB4 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "OR H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = or_bytes(cpu, cpu.registers.a, cpu.registers.h);
+                Result::None
+            },
+        }),
+        0xB5 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "OR L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = or_bytes(cpu, cpu.registers.a, cpu.registers.l);
+                Result::None
+            },
+        }),
+        0xB6 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "OR (HL)",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = or_bytes(cpu, cpu.registers.a, read_hl_addr(cpu));
                 Result::None
             },
         }),
@@ -1620,14 +1906,63 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0xBA => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "CP D",
+            handler: |cpu: &mut Cpu| {
+                compare_bytes(cpu, cpu.registers.a, cpu.registers.d);
+                Result::None
+            },
+        }),
+        0xBB => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "CP E",
+            handler: |cpu: &mut Cpu| {
+                compare_bytes(cpu, cpu.registers.a, cpu.registers.e);
+                Result::None
+            },
+        }),
+        0xBC => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "CP H",
+            handler: |cpu: &mut Cpu| {
+                compare_bytes(cpu, cpu.registers.a, cpu.registers.h);
+                Result::None
+            },
+        }),
+        0xBD => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "CP L",
+            handler: |cpu: &mut Cpu| {
+                compare_bytes(cpu, cpu.registers.a, cpu.registers.l);
+                Result::None
+            },
+        }),
         0xBE => Some(&Instruction {
             length: 1,
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "CP (HL)",
             handler: |cpu: &mut Cpu| {
-                let address = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                compare_bytes(cpu, cpu.registers.a, cpu.mmu.read(address));
+                compare_bytes(cpu, cpu.registers.a, read_hl_addr(cpu));
+                Result::None
+            },
+        }),
+        0xBF => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "CP A",
+            handler: |cpu: &mut Cpu| {
+                compare_bytes(cpu, cpu.registers.a, cpu.registers.a);
                 Result::None
             },
         }),
@@ -1936,6 +2271,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0xEE => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "XOR n",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = xor_bytes(cpu, cpu.registers.a, cpu.get_attribute_for_op_code(0));
+                Result::None
+            },
+        }),
         0xEF => Some(&Instruction {
             length: 1,
             clock_cycles: 16,
@@ -2045,6 +2390,16 @@ fn get_regular_instruction(op_code: &u8) -> Option<&Instruction> {
 
 fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
     match op_code {
+        0x10 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RL B",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.b = rotate_left(cpu, cpu.registers.b);
+                Result::None
+            },
+        }),
         0x11 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -2052,6 +2407,57 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "RL C",
             handler: |cpu: &mut Cpu| {
                 cpu.registers.c = rotate_left(cpu, cpu.registers.c);
+                Result::None
+            },
+        }),
+        0x12 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RL D",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.d = rotate_left(cpu, cpu.registers.d);
+                Result::None
+            },
+        }),
+        0x13 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RL E",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.e = rotate_left(cpu, cpu.registers.e);
+                Result::None
+            },
+        }),
+        0x14 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RL H",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.h = rotate_left(cpu, cpu.registers.h);
+                Result::None
+            },
+        }),
+        0x15 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RL L",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.l = rotate_left(cpu, cpu.registers.l);
+                Result::None
+            },
+        }),
+        //TODO: 0x16
+        0x17 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RL A",
+            handler: |cpu: &mut Cpu| {
+                cpu.registers.a = rotate_left(cpu, cpu.registers.a);
                 Result::None
             },
         }),
@@ -2265,6 +2671,16 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x46 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 12,
+            clock_cycles_condition: None,
+            description: "BIT 0,(HL)",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, read_hl_addr(cpu), 0);
+                Result::None
+            },
+        }),
         0x47 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -2352,6 +2768,16 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "BIT 2,B",
             handler: |cpu: &mut Cpu| {
                 check_bit(cpu, cpu.registers.b, 2);
+                Result::None
+            },
+        }),
+        0x57 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 2,A",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.a, 2);
                 Result::None
             },
         }),
@@ -2515,6 +2941,16 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x70 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 6,B",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.b, 6);
+                Result::None
+            },
+        }),
         0x77 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -2522,6 +2958,16 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "BIT 6,A",
             handler: |cpu: &mut Cpu| {
                 check_bit(cpu, cpu.registers.a, 6);
+                Result::None
+            },
+        }),
+        0x78 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 7,A",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.b, 7);
                 Result::None
             },
         }),
@@ -2563,8 +3009,7 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "BIT 7,(HL)",
             handler: |cpu: &mut Cpu| {
-                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                check_bit(cpu, cpu.mmu.read(addr), 7);
+                check_bit(cpu, read_hl_addr(cpu), 7);
                 Result::None
             },
         }),
@@ -2575,6 +3020,30 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "BIT 7,A",
             handler: |cpu: &mut Cpu| {
                 check_bit(cpu, cpu.registers.a, 7);
+                Result::None
+            },
+        }),
+        0xBE => Some(&Instruction {
+            length: 2,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "RES 7,(HL)",
+            handler: |cpu: &mut Cpu| {
+                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
+                let result = reset_bit_in_byte(cpu.mmu.read(addr), 7);
+                cpu.mmu.write(addr, result);
+                Result::None
+            },
+        }),
+        0xFE => Some(&Instruction {
+            length: 2,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "SET 7,(HL)",
+            handler: |cpu: &mut Cpu| {
+                let addr = bytes_to_word(cpu.registers.h, cpu.registers.l);
+                let result = set_bit_in_byte(cpu.mmu.read(addr), 7);
+                cpu.mmu.write(addr, result);
                 Result::None
             },
         }),
@@ -2733,6 +3202,34 @@ fn substract_byte(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
     result
 }
 
+fn substract_bytes_carry(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
+    let mut result = byte1.wrapping_sub(byte2);
+    let mut carry: u8 = 0;
+
+    if cpu.registers.check_flag(Flag::C) {
+        carry = 1;
+    }
+
+    result = result.wrapping_sub(carry);
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //TODO: Check if this is correct
+    if (byte1 & 0xf) < (byte2 & 0xf) + carry {
+        cpu.registers.set_flag(Flag::H);
+    }
+
+    if (byte1 & 0xff) < (byte2 & 0xff) + carry {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
 fn add_bytes_carry(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
     let mut result = byte1.wrapping_add(byte2);
     let mut carry: u8 = 0;
@@ -2885,4 +3382,9 @@ fn srl(cpu: &mut Cpu, value: u8) -> u8 {
     }
 
     result
+}
+
+fn read_hl_addr(cpu: &Cpu) -> u8 {
+    cpu.mmu
+        .read(bytes_to_word(cpu.registers.h, cpu.registers.l))
 }

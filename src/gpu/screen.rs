@@ -1,10 +1,9 @@
-use crate::gpu::{Pixel, SCREEN_HEIGHT, SCREEN_MAX_PIXELS, SCREEN_WIDTH};
+use crate::gpu::{Pixel, SCALE, SCREEN_HEIGHT, SCREEN_MAX_PIXELS, SCREEN_WIDTH};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
-
-const SCALE: u8 = 4;
+use sdl2::EventPump;
 
 pub trait Screen {
     fn render(&mut self, screen_buffer: &[[Pixel; SCREEN_MAX_PIXELS]; SCREEN_MAX_PIXELS]);
@@ -18,22 +17,7 @@ pub struct SdlScreen {
 }
 
 impl SdlScreen {
-    pub fn new() -> SdlScreen {
-        let sdl_context = sdl2::init().unwrap();
-        let video_subsystem = sdl_context.video().unwrap();
-        let window = video_subsystem
-            .window(
-                "gb",
-                SCREEN_WIDTH as u32 * SCALE as u32,
-                SCREEN_HEIGHT as u32 * SCALE as u32,
-            )
-            .opengl()
-            .position_centered()
-            .build()
-            .unwrap();
-
-        let canvas = window.into_canvas().build().unwrap();
-
+    pub fn new(canvas: Canvas<Window>) -> SdlScreen {
         SdlScreen {
             width: SCREEN_WIDTH,
             height: SCREEN_HEIGHT,
