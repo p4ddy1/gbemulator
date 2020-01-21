@@ -61,7 +61,10 @@ fn main() {
     const CLOCK_CYCLES_PER_FRAME: usize = CPU_CLOCK_HZ / FPS;
     const FRAME_TIME_NS: u64 = 1000000000 / FPS as u64;
 
-    let mut clock_cycles_passed = 0;
+    const DIV_DIVIDER: usize = 256;
+
+    let mut clock_cycles_passed_frame = 0;
+    let mut clock_cycles_passed_timer = 0;
 
     'mainloop: loop {
         for event in event_pump.poll_iter() {
@@ -169,12 +172,22 @@ fn main() {
             }
         }
 
-        while clock_cycles_passed < CLOCK_CYCLES_PER_FRAME {
+        while clock_cycles_passed_frame < CLOCK_CYCLES_PER_FRAME {
             let last_cycle = cpu.execute_program_counter();
-            clock_cycles_passed += last_cycle as usize;
+            clock_cycles_passed_frame += last_cycle as usize;
+
+            clock_cycles_passed_timer += clock_cycles_passed_frame;
+
+            if clock_cycles_passed_timer % DIV_DIVIDER == 0 {
+                cpu.mmu.increase_divider();
+            }
+
+            if clock_cycles_passed_timer > CPU_CLOCK_HZ {
+                clock_cycles_passed_timer = 0;
+            }
         }
 
-        clock_cycles_passed = 0;
+        clock_cycles_passed_frame = 0;
 
         thread::sleep(Duration::from_nanos(FRAME_TIME_NS));
     }

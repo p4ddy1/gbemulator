@@ -41,6 +41,7 @@ pub struct Mmu<'a> {
     interrupt_flags: u8,
     is_booted: bool,
     pub joypad: &'a mut Joypad,
+    divider: u8,
 }
 
 impl<'a> Mmu<'a> {
@@ -64,6 +65,7 @@ impl<'a> Mmu<'a> {
             interrupt_flags: 0,
             is_booted: false,
             joypad: joypad,
+            divider: 0,
         }
     }
 
@@ -90,6 +92,10 @@ impl<'a> Mmu<'a> {
             IO_ADDRESS..=0xFF7E => {
                 if address == 0xFF00 {
                     self.joypad.select_keys_by_write(value);
+                }
+
+                if address == 0xFF04 {
+                    self.divider = 0;
                 }
 
                 if address == 0xFF40 {
@@ -175,7 +181,7 @@ impl<'a> Mmu<'a> {
                 }
 
                 if address == 0xFF04 {
-                    return 0x1B;
+                    return self.divider;
                 }
 
                 if address == 0xFF40 {
@@ -213,5 +219,9 @@ impl<'a> Mmu<'a> {
             0xCB => Opcode::CB(self.read(pc + 1)),
             _ => Opcode::Regular(op_code),
         }
+    }
+
+    pub fn increase_divider(&mut self) {
+        self.divider = self.divider.wrapping_add(1);
     }
 }
