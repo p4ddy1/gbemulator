@@ -78,10 +78,6 @@ impl<'a> Gpu<'a> {
 
     pub fn write_lcdc(&mut self, value: u8) {
         self.lcdc = value;
-
-        if is_bit_set(value, 7) {
-            self.clear_screen_buffer();
-        }
     }
 
     pub fn set_bgpal(&mut self, value: u8) {
@@ -153,6 +149,11 @@ impl<'a> Gpu<'a> {
     }
 
     fn render_scanline_to_screen(&mut self) {
+        //Bit 7 = LCD Enable. Disabled? Render nothing
+        if !is_bit_set(self.lcdc, 7) {
+            return;
+        }
+
         self.render_background_line();
 
         if is_bit_set(self.lcdc, 1) {

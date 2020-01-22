@@ -2771,6 +2771,66 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
                 Result::None
             },
         }),
+        0x51 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 2,C",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.c, 2);
+                Result::None
+            },
+        }),
+        0x52 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 2,D",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.d, 2);
+                Result::None
+            },
+        }),
+        0x53 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 2,E",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.e, 2);
+                Result::None
+            },
+        }),
+        0x54 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 2,H",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.h, 2);
+                Result::None
+            },
+        }),
+        0x55 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 2,L",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.l, 2);
+                Result::None
+            },
+        }),
+        0x56 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 2,(HL)",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, read_hl_addr(cpu), 2);
+                Result::None
+            },
+        }),
         0x57 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -2788,6 +2848,56 @@ fn get_cb_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "BIT 3,B",
             handler: |cpu: &mut Cpu| {
                 check_bit(cpu, cpu.registers.b, 3);
+                Result::None
+            },
+        }),
+        0x59 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 3,C",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.c, 3);
+                Result::None
+            },
+        }),
+        0x5A => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 3,D",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.d, 3);
+                Result::None
+            },
+        }),
+        0x5B => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 3,E",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.e, 3);
+                Result::None
+            },
+        }),
+        0x5C => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 3,H",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.h, 3);
+                Result::None
+            },
+        }),
+        0x5D => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "BIT 3,L",
+            handler: |cpu: &mut Cpu| {
+                check_bit(cpu, cpu.registers.l, 3);
                 Result::None
             },
         }),
