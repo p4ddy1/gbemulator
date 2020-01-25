@@ -1,6 +1,6 @@
 use crate::cpu::clock::Clock;
 use crate::cpu::instructions;
-use crate::cpu::instructions::Result;
+use crate::cpu::instructions::ExecutionType;
 use crate::cpu::interrupts::handle_interrupts;
 use crate::cpu::registers::Registers;
 use crate::memory::mmu::{Opcode, INTERRUPT_FLAGS_ADDRESS};
@@ -61,16 +61,16 @@ impl<'a> Cpu<'a> {
             }
         }*/
 
-        let result = (instruction.handler)(self);
+        let result = (instruction.handler)(self, &op_code);
 
         //Use the correct value if action of conditional instruction is taken or not
         let mut clock_cycles = match result {
-            Result::ActionTaken => {
+            ExecutionType::ActionTaken => {
                 self.registers.pc += instruction.length;
                 instruction.clock_cycles_condition.unwrap()
             }
-            Result::Jumped => instruction.clock_cycles,
-            Result::JumpedActionTaken => instruction.clock_cycles_condition.unwrap(),
+            ExecutionType::Jumped => instruction.clock_cycles,
+            ExecutionType::JumpedActionTaken => instruction.clock_cycles_condition.unwrap(),
             _ => {
                 self.registers.pc += instruction.length;
                 instruction.clock_cycles

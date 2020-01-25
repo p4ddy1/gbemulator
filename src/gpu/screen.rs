@@ -3,7 +3,6 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
-use sdl2::EventPump;
 
 pub trait Screen {
     fn render(&mut self, screen_buffer: &[[Pixel; SCREEN_MAX_PIXELS]; SCREEN_MAX_PIXELS]);

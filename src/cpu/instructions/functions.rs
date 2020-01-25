@@ -1,0 +1,336 @@
+use crate::cpu::cpu::Cpu;
+use crate::cpu::registers::Flag;
+use crate::util::binary::{bytes_to_word, is_bit_set};
+
+pub fn rotate_left(cpu: &mut Cpu, value: u8) -> u8 {
+    let mut result = value << 1;
+
+    //If bit 7 is set, set bit 0 because bit 7 will get shifted out
+    if is_bit_set(value, 7) {
+        result |= 0x01;
+    }
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //Set carry flag if bit 7 is set in initial value because it will be shifted out so carry occurs
+    if is_bit_set(value, 7) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn check_bit(cpu: &mut Cpu, byte: u8, index: u8) {
+    cpu.registers.clear_flag(Flag::Z);
+    cpu.registers.clear_flag(Flag::N);
+
+    if !is_bit_set(byte, index) {
+        cpu.registers.set_flag(Flag::Z)
+    }
+
+    cpu.registers.set_flag(Flag::H)
+}
+
+pub fn swap_nibbles(cpu: &mut Cpu, byte: u8) -> u8 {
+    let result = (byte >> 4) + (byte << 4);
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    result
+}
+
+pub fn sla(cpu: &mut Cpu, value: u8) -> u8 {
+    cpu.registers.clear_all_flags();
+    let result = value << 1;
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    if is_bit_set(value, 7) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn srl(cpu: &mut Cpu, value: u8) -> u8 {
+    cpu.registers.clear_all_flags();
+    let result = value >> 1;
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    if is_bit_set(value, 0) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn jump_on_flag_reset(cpu: &mut Cpu, flag: Flag) -> bool {
+    if !cpu.registers.check_flag(flag) {
+        jump_to_attribute_address(cpu);
+        return true;
+    }
+    false
+}
+
+pub fn jump_on_flag(cpu: &mut Cpu, flag: Flag) -> bool {
+    if cpu.registers.check_flag(flag) {
+        jump_to_attribute_address(cpu);
+        return true;
+    }
+    false
+}
+
+pub fn jump_to_attribute_address(cpu: &mut Cpu) {
+    let destination = cpu.get_attribute_for_op_code(0);
+
+    if destination < 127 {
+        cpu.registers.pc += destination as u16;
+    } else {
+        cpu.registers.pc -= 256 - destination as u16;
+    }
+}
+
+pub fn increment_byte(cpu: &mut Cpu, value: u8) -> u8 {
+    let result = value.wrapping_add(1);
+
+    cpu.registers.clear_flag(Flag::H);
+    cpu.registers.clear_flag(Flag::Z);
+    cpu.registers.clear_flag(Flag::N);
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //Carry from bit 3 occured?
+    if (result & 0xf) + (1 & 0xf) > 0xF {
+        cpu.registers.set_flag(Flag::H);
+    }
+
+    result
+}
+
+pub fn decrement_byte(cpu: &mut Cpu, value: u8) -> u8 {
+    let result = value.wrapping_sub(1);
+
+    cpu.registers.clear_flag(Flag::Z);
+    cpu.registers.clear_flag(Flag::H);
+
+    cpu.registers.set_flag(Flag::N);
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    if (value & 0xf) < (result & 0xf) {
+        cpu.registers.set_flag(Flag::H);
+    }
+
+    result as u8
+}
+
+//Rotate left through carry flag
+pub fn rotate_left_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
+    let mut result = value << 1;
+
+    //Carry occcured so set LSB
+    if cpu.registers.check_flag(Flag::C) {
+        result |= 0x01;
+    }
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //Set carry flag if bit 7 is set in initial value because it will be shifted out so carry occurs
+    if is_bit_set(value, 7) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+//Basiclly substraction but result is thrown away
+pub fn compare_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) {
+    substract_byte(cpu, byte1, byte2);
+}
+
+pub fn substract_byte(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
+    let result = byte1.wrapping_sub(byte2);
+
+    cpu.registers.clear_flag(Flag::Z);
+    cpu.registers.clear_flag(Flag::C);
+    cpu.registers.clear_flag(Flag::H);
+
+    cpu.registers.set_flag(Flag::N);
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //Half carry
+    if (byte1 & 0xf) < (byte2 & 0xf) {
+        cpu.registers.set_flag(Flag::H);
+    }
+
+    //Carry
+    if (byte1 & 0xff) < (byte2 & 0xff) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn substract_bytes_carry(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
+    let mut result = byte1.wrapping_sub(byte2);
+    let mut carry: u8 = 0;
+
+    if cpu.registers.check_flag(Flag::C) {
+        carry = 1;
+    }
+
+    result = result.wrapping_sub(carry);
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //TODO: Check if this is correct
+    if (byte1 & 0xf) < (byte2 & 0xf) + carry {
+        cpu.registers.set_flag(Flag::H);
+    }
+
+    if (byte1 & 0xff) < (byte2 & 0xff) + carry {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn add_bytes_carry(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
+    let mut result = byte1.wrapping_add(byte2);
+    let mut carry: u8 = 0;
+
+    if cpu.registers.check_flag(Flag::C) {
+        carry = 1;
+    }
+
+    result = result.wrapping_add(carry);
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    if ((byte1 & 0xf) + (byte2 & 0xf)) + carry > 0xF {
+        cpu.registers.set_flag(Flag::H);
+    }
+
+    if byte1 as u16 + byte2 as u16 + carry as u16 > 0xFF {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn add_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
+    let result = byte1.wrapping_add(byte2);
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    if (byte1 & 0xf) + (byte2 & 0xf) > 0xF {
+        cpu.registers.set_flag(Flag::H);
+    }
+
+    if byte1 as u16 + byte2 as u16 > 0xFF {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn add_words(cpu: &mut Cpu, word1: u16, word2: u16) -> u16 {
+    let result = word1.wrapping_add(word2);
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    if (word1 & 0x7FFF) + (word2 & 0x7FFF) > 0x7FFF {
+        cpu.registers.set_flag(Flag::H);
+    }
+
+    if word1 as u32 + word2 as u32 > 0xFFFF {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn or_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
+    let result = byte1 | byte2;
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    result
+}
+
+pub fn xor_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
+    let result = byte1 ^ byte2;
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    result
+}
+
+pub fn and_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
+    let result = byte1 & byte2;
+
+    cpu.registers.clear_flag(Flag::Z);
+    cpu.registers.clear_flag(Flag::C);
+    cpu.registers.clear_flag(Flag::N);
+
+    cpu.registers.set_flag(Flag::H);
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    result
+}
+
+pub fn rst(cpu: &mut Cpu, param: u8) {
+    cpu.registers.sp -= 2;
+    cpu.mmu.write_word(cpu.registers.sp, cpu.registers.pc + 1);
+    cpu.registers.pc = bytes_to_word(0x00, param);
+}

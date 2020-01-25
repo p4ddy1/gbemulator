@@ -5,7 +5,6 @@ use crate::gpu::screen::SdlScreen;
 use crate::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::io::joypad::{Joypad, Key};
 use crate::memory::mmu::Mmu;
-use crate::util::binary::{is_bit_set, reset_bit_in_byte};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::thread;
