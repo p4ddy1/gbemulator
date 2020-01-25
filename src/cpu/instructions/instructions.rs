@@ -1250,7 +1250,16 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
-        //TODO: 0x76
+        0x76 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "HALT",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                //TODO: Implement halt
+                ExecutionType::None
+            },
+        }),
         0x77 => Some(&Instruction {
             length: 1,
             clock_cycles: 8,

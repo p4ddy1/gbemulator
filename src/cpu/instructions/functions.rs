@@ -24,6 +24,72 @@ pub fn rotate_left(cpu: &mut Cpu, value: u8) -> u8 {
     result
 }
 
+//Rotate left through carry flag
+pub fn rotate_left_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
+    let mut result = value << 1;
+
+    //Carry occcured so set LSB
+    if cpu.registers.check_flag(Flag::C) {
+        result |= 0x01;
+    }
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //Set carry flag if bit 7 is set in initial value because it will be shifted out so carry occurs
+    if is_bit_set(value, 7) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn rotate_right(cpu: &mut Cpu, value: u8) -> u8 {
+    let mut result = value >> 1;
+
+    //If bit 0 is set, set bit 7 because bit 0 will get shifted out
+    if is_bit_set(value, 0) {
+        result |= 0x80;
+    }
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //Set carry flag if bit 0 is set in initial value because it will be shifted out so carry occurs
+    if is_bit_set(value, 0) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn rotate_right_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
+    let mut result = value >> 1;
+
+    if cpu.registers.check_flag(Flag::C) {
+        result |= 0x80;
+    }
+
+    cpu.registers.clear_all_flags();
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    //Set carry flag if bit 0 is set in initial value because it will be shifted out so carry occurs
+    if is_bit_set(value, 0) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
 pub fn check_bit(cpu: &mut Cpu, byte: u8, index: u8) {
     cpu.registers.clear_flag(Flag::Z);
     cpu.registers.clear_flag(Flag::N);
@@ -55,6 +121,21 @@ pub fn sla(cpu: &mut Cpu, value: u8) -> u8 {
     }
 
     if is_bit_set(value, 7) {
+        cpu.registers.set_flag(Flag::C);
+    }
+
+    result
+}
+
+pub fn sra(cpu: &mut Cpu, value: u8) -> u8 {
+    cpu.registers.clear_all_flags();
+    let result = value >> 1;
+
+    if result == 0 {
+        cpu.registers.set_flag(Flag::Z);
+    }
+
+    if is_bit_set(value, 0) {
         cpu.registers.set_flag(Flag::C);
     }
 
@@ -138,29 +219,6 @@ pub fn decrement_byte(cpu: &mut Cpu, value: u8) -> u8 {
     }
 
     result as u8
-}
-
-//Rotate left through carry flag
-pub fn rotate_left_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
-    let mut result = value << 1;
-
-    //Carry occcured so set LSB
-    if cpu.registers.check_flag(Flag::C) {
-        result |= 0x01;
-    }
-
-    cpu.registers.clear_all_flags();
-
-    if result == 0 {
-        cpu.registers.set_flag(Flag::Z);
-    }
-
-    //Set carry flag if bit 7 is set in initial value because it will be shifted out so carry occurs
-    if is_bit_set(value, 7) {
-        cpu.registers.set_flag(Flag::C);
-    }
-
-    result
 }
 
 //Basiclly substraction but result is thrown away

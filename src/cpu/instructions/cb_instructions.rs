@@ -102,6 +102,52 @@ macro_rules! set_hl {
 
 pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
     match op_code {
+        0x00..=0x05 | 0x07 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RLC (B..A)",
+            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+                let value = read_by_opcode(op_code, cpu);
+                let result = functions::rotate_left(cpu, value);
+                write_by_opcode(op_code, result, cpu);
+                ExecutionType::None
+            },
+        }),
+        0x06 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "RLC (HL)",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                let result = functions::rotate_left(cpu, read_hl_addr(cpu));
+                write_hl_addr(result, cpu);
+                ExecutionType::None
+            },
+        }),
+        0x08..=0x0D | 0x0F => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RRC (B..A)",
+            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+                let value = read_by_opcode(op_code, cpu);
+                let result = functions::rotate_right(cpu, value);
+                write_by_opcode(op_code, result, cpu);
+                ExecutionType::None
+            },
+        }),
+        0x0E => Some(&Instruction {
+            length: 2,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "RRC (HL)",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                let result = functions::rotate_right(cpu, read_hl_addr(cpu));
+                write_hl_addr(result, cpu);
+                ExecutionType::None
+            },
+        }),
         0x10..=0x15 | 0x17 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -109,7 +155,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "RL (B..A)",
             handler: |cpu: &mut Cpu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
-                let result = functions::rotate_left(cpu, value);
+                let result = functions::rotate_left_through_carry(cpu, value);
                 write_by_opcode(op_code, result, cpu);
                 ExecutionType::None
             },
@@ -120,7 +166,30 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "RL (HL)",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_left(cpu, read_hl_addr(cpu));
+                let result = functions::rotate_left_through_carry(cpu, read_hl_addr(cpu));
+                write_hl_addr(result, cpu);
+                ExecutionType::None
+            },
+        }),
+        0x18..=0x1D | 0x1F => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "RR (B..A)",
+            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+                let value = read_by_opcode(op_code, cpu);
+                let result = functions::rotate_right_through_carry(cpu, value);
+                write_by_opcode(op_code, result, cpu);
+                ExecutionType::None
+            },
+        }),
+        0x1E => Some(&Instruction {
+            length: 2,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "RR (HL)",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                let result = functions::rotate_right_through_carry(cpu, read_hl_addr(cpu));
                 write_hl_addr(result, cpu);
                 ExecutionType::None
             },
@@ -148,6 +217,29 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
+        0x28..=0x2D | 0x2F => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "SRA (B..A)",
+            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+                let value = read_by_opcode(op_code, cpu);
+                let result = functions::sra(cpu, value);
+                write_by_opcode(op_code, result, cpu);
+                ExecutionType::None
+            },
+        }),
+        0x2E => Some(&Instruction {
+            length: 2,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "SRA (HL)",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                let result = functions::sra(cpu, read_hl_addr(cpu));
+                write_hl_addr(result, cpu);
+                ExecutionType::None
+            },
+        }),
         0x30..=0x35 | 0x37 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -170,7 +262,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 write_hl_addr(result, cpu);
                 ExecutionType::None
             },
-        }), //
+        }),
         0x38..=0x3D | 0x3F => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
