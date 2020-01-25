@@ -5,6 +5,7 @@ use crate::cpu::instructions::{
 use crate::memory::mmu::Opcode;
 use crate::util::binary::{reset_bit_in_byte, set_bit_in_byte};
 
+//TODO: Fix descriptions
 macro_rules! bit {
     ($bit: expr) => {
         Some(&Instruction {
@@ -100,8 +101,6 @@ macro_rules! set_hl {
 }
 
 pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
-    //TODO: Fix descriptions
-
     match op_code {
         0x10..=0x15 | 0x17 => Some(&Instruction {
             length: 2,
@@ -130,7 +129,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             length: 2,
             clock_cycles: 8,
             clock_cycles_condition: None,
-            description: "functions::sla (B..A)",
+            description: "SLA (B..A)",
             handler: |cpu: &mut Cpu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::sla(cpu, value);
@@ -142,7 +141,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             length: 2,
             clock_cycles: 16,
             clock_cycles_condition: None,
-            description: "functions::sla (HL)",
+            description: "SLA (HL)",
             handler: |cpu: &mut Cpu, _: &Opcode| {
                 let result = functions::sla(cpu, read_hl_addr(cpu));
                 write_hl_addr(result, cpu);
