@@ -18,7 +18,7 @@ mod memory;
 mod util;
 
 fn main() {
-    let cartridge = match Cartridge::new_from_file("testrom/tetris.gb") {
+    let cartridge = match Cartridge::new_from_file("testrom/drmario.gb") {
         Ok(c) => c,
         Err(e) => {
             panic!(e);
@@ -56,7 +56,7 @@ fn main() {
     let mut cpu = Cpu::new(&mut mmu);
 
     const CPU_CLOCK_HZ: usize = 4194304;
-    const FPS: usize = 120;
+    const FPS: usize = 60;
     const CLOCK_CYCLES_PER_FRAME: usize = CPU_CLOCK_HZ / FPS;
     const FRAME_TIME_NS: u64 = 1000000000 / FPS as u64;
 
@@ -171,6 +171,7 @@ fn main() {
             }
         }
 
+        //TODO: Check if this is the correct way
         while clock_cycles_passed_frame < CLOCK_CYCLES_PER_FRAME {
             let last_cycle = cpu.execute_program_counter();
             clock_cycles_passed_frame += last_cycle as usize;
@@ -187,6 +188,8 @@ fn main() {
         }
 
         clock_cycles_passed_frame = 0;
+
+        cpu.mmu.gpu.screen.present();
 
         thread::sleep(Duration::from_nanos(FRAME_TIME_NS));
     }

@@ -7,7 +7,8 @@ const VRAM_SIZE: usize = 8192;
 const OAM_SIZE: usize = 160;
 const OAM_ADDRESS: u16 = 0xFE00;
 
-const TILESET_BEGIN_ADDRESS: u16 = 0x8000;
+const TILESET_FIRST_BEGIN_ADDRESS: u16 = 0x8000;
+const TILESET_SECOND_BEGIN_ADDRESS: u16 = 0x9000;
 const TILESET_END_ADDRESS: u16 = 0x97EF;
 const BGMAP_BEGIN_ADDRESS: u16 = 0x9800;
 const BGMAP_END_ADDRESS: u16 = 0x9BFE;
@@ -35,7 +36,7 @@ pub struct Gpu<'a> {
     pub scroll_x: u8,
     pub scroll_y: u8,
     pub current_scanline: u8,
-    screen: &'a mut dyn Screen,
+    pub screen: &'a mut dyn Screen,
     screen_buffer: [[Pixel; SCREEN_MAX_PIXELS]; SCREEN_MAX_PIXELS],
     pub lcdc: u8,
     pub v_blank: bool, //TODO: Remove!! only for testing!!!
@@ -163,6 +164,7 @@ impl<'a> Gpu<'a> {
 
     fn render_sprite_line(&mut self) {
         //TODO: Scroll_X is missing, implement sprite options, palette and prio
+
         let current_line = self.current_scanline.wrapping_add(self.scroll_y);
 
         for sprite_count in 0..40 {
@@ -170,25 +172,28 @@ impl<'a> Gpu<'a> {
             //0 = Y, 1 = X, 2 = Tile, 3 = Options
             let sprite_begin_address = OAM_ADDRESS + sprite_count * 4;
 
-            //Offset x = 8 Offset y = 16
+            //Offset y = 16
             let sprite_y = self.read_oam(sprite_begin_address).wrapping_sub(16);
-            let sprite_x = self.read_oam(sprite_begin_address + 1).wrapping_sub(8);
-            let sprite_tile = self.read_oam(sprite_begin_address + 2);
-
-            let sprite_options = self.read_oam(sprite_begin_address + 3);
-
-            let tile_begin_address = TILESET_BEGIN_ADDRESS + (sprite_tile as u16 * 16);
-
-            //Each tile consists of one byte at the y axes
-            let tile_data_address = tile_begin_address + (current_line % 8 * 2) as u16;
-            //The color data sits one byte after the pixel data
-            let tile_color_data_address = tile_begin_address + (current_line % 8 * 2) as u16 + 1;
-
-            let tile_data = self.read_vram(tile_data_address);
-            let tile_color_data = self.read_vram(tile_color_data_address);
-
             //Check if tile is at current scanline
             if current_line >= sprite_y && current_line < sprite_y + 8 {
+                //Offset x = 8
+                let sprite_x = self.read_oam(sprite_begin_address + 1).wrapping_sub(8);
+                let sprite_tile = self.read_oam(sprite_begin_address + 2);
+                let sprite_options = self.read_oam(sprite_begin_address + 3);
+
+                let tile_begin_address = TILESET_FIRST_BEGIN_ADDRESS + (sprite_tile as u16 * 16);
+
+                //Get the offset fot addressing the pixel data in vram
+                let line_offset = current_line - sprite_y;
+
+                //Each tile consists of one byte at the y axes
+                let tile_data_address = tile_begin_address + (line_offset * 2) as u16;
+                //The color data sits one byte after the pixel data
+                let tile_color_data_address = tile_begin_address + (line_offset * 2) as u16 + 1;
+
+                let tile_data = self.read_vram(tile_data_address);
+                let tile_color_data = self.read_vram(tile_color_data_address);
+
                 for x in 0..8 {
                     //Checking each bit of the tile and setting the according pixel on the framebuffer
                     let pixel_is_active = is_bit_set(tile_data, 7 - x);
@@ -233,8 +238,23 @@ impl<'a> Gpu<'a> {
 
             let tile = self.read_vram(tile_address);
 
+            //TODO: Optimize this
+            let mut tile_begin_address = TILESET_FIRST_BEGIN_ADDRESS;
+
+            if !is_bit_set(self.lcdc, 4) {
+                tile_begin_address = TILESET_SECOND_BEGIN_ADDRESS;
+            }
+
             //Get the begin address for the tile on the background. Each tile consists of 16 bytes
-            let tile_begin_address = TILESET_BEGIN_ADDRESS + (tile as u16 * 16);
+            if tile_begin_address == TILESET_FIRST_BEGIN_ADDRESS {
+                tile_begin_address += tile as u16 * 16;
+            } else {
+                if tile < 127 {
+                    tile_begin_address += tile as u16 * 16;
+                } else {
+                    tile_begin_address -= (256 - tile as u16) * 16;
+                }
+            }
 
             //Each tile consists of one byte at the y axes
             let tile_data_address = tile_begin_address + (y_bgmap % 8 * 2) as u16;

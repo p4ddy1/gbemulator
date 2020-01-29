@@ -6,6 +6,7 @@ use sdl2::video::Window;
 
 pub trait Screen {
     fn render(&mut self, screen_buffer: &[[Pixel; SCREEN_MAX_PIXELS]; SCREEN_MAX_PIXELS]);
+    fn present(&mut self);
 }
 
 //TODO: This rendering module in inefficent and should only used for testing
@@ -60,7 +61,9 @@ impl Screen for SdlScreen {
                 self.draw_pixel(y as i32, x as i32);
             }
         }
+    }
 
+    fn present(&mut self) {
         self.canvas.present();
     }
 }

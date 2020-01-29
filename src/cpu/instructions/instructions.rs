@@ -1363,6 +1363,16 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
+        0x81 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADD A,C",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.c);
+                ExecutionType::None
+            },
+        }),
         0x82 => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -1370,6 +1380,26 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "ADD A,D",
             handler: |cpu: &mut Cpu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.d);
+                ExecutionType::None
+            },
+        }),
+        0x83 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADD A,E",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.e);
+                ExecutionType::None
+            },
+        }),
+        0x84 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADD A,H",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
             },
         }),
@@ -1400,6 +1430,16 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "ADD A,A",
             handler: |cpu: &mut Cpu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.a);
+                ExecutionType::None
+            },
+        }),
+        0x88 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "ADC A,B",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a = functions::add_bytes_carry(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
             },
         }),
@@ -1991,7 +2031,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             },
         }),
         0xC2 => Some(&Instruction {
-            length: 1,
+            length: 3,
             clock_cycles: 12,
             clock_cycles_condition: Some(16),
             description: "JP NZ,a16",
@@ -2019,6 +2059,19 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 );
                 cpu.registers.pc = addr;
                 ExecutionType::Jumped
+            },
+        }),
+        0xC4 => Some(&Instruction {
+            length: 3,
+            clock_cycles: 12,
+            clock_cycles_condition: Some(24),
+            description: "CALL NZ a16",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                if !cpu.registers.check_flag(Flag::Z) {
+                    functions::call(cpu);
+                    return ExecutionType::JumpedActionTaken;
+                }
+                ExecutionType::None
             },
         }),
         0xC5 => Some(&Instruction {
@@ -2095,14 +2148,17 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "CALL a16",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                //Put address of next instruction onto stack and jump to aa
-                cpu.registers.sp -= 2;
-                cpu.mmu.write_word(cpu.registers.sp, cpu.registers.pc + 3);
-                cpu.registers.pc = binary::bytes_to_word(
-                    cpu.get_attribute_for_op_code(1),
-                    cpu.get_attribute_for_op_code(0),
-                );
-
+                functions::call(cpu);
+                ExecutionType::Jumped
+            },
+        }),
+        0xCF => Some(&Instruction {
+            length: 1,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "RST 08H",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                functions::rst(cpu, 0x08);
                 ExecutionType::Jumped
             },
         }),
@@ -2130,6 +2186,23 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 cpu.registers.d = cpu.mmu.read(cpu.registers.sp);
                 cpu.registers.e = cpu.mmu.read(cpu.registers.sp + 1);
                 cpu.registers.sp += 2;
+                ExecutionType::None
+            },
+        }),
+        0xD2 => Some(&Instruction {
+            length: 3,
+            clock_cycles: 12,
+            clock_cycles_condition: Some(16),
+            description: "JP NC,a16",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                if !cpu.registers.check_flag(Flag::C) {
+                    cpu.registers.pc = bytes_to_word(
+                        cpu.get_attribute_for_op_code(1),
+                        cpu.get_attribute_for_op_code(0),
+                    );
+                    return ExecutionType::JumpedActionTaken;
+                }
+
                 ExecutionType::None
             },
         }),
@@ -2185,6 +2258,16 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 cpu.interrupt_master_enabled = true;
                 cpu.registers.pc = cpu.mmu.read_word(cpu.registers.sp);
                 cpu.registers.sp += 2;
+                ExecutionType::Jumped
+            },
+        }),
+        0xDF => Some(&Instruction {
+            length: 1,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "RST 18H",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                functions::rst(cpu, 0x18);
                 ExecutionType::Jumped
             },
         }),
@@ -2387,7 +2470,16 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
-
+        0xFF => Some(&Instruction {
+            length: 1,
+            clock_cycles: 16,
+            clock_cycles_condition: None,
+            description: "RST 38H",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                functions::rst(cpu, 0x38);
+                ExecutionType::Jumped
+            },
+        }),
         _ => None,
     }
 }

@@ -392,3 +392,13 @@ pub fn rst(cpu: &mut Cpu, param: u8) {
     cpu.mmu.write_word(cpu.registers.sp, cpu.registers.pc + 1);
     cpu.registers.pc = bytes_to_word(0x00, param);
 }
+
+pub fn call(cpu: &mut Cpu) {
+    //Put address of next instruction onto stack and jump to aa
+    cpu.registers.sp -= 2;
+    cpu.mmu.write_word(cpu.registers.sp, cpu.registers.pc + 3);
+    cpu.registers.pc = bytes_to_word(
+        cpu.get_attribute_for_op_code(1),
+        cpu.get_attribute_for_op_code(0),
+    );
+}

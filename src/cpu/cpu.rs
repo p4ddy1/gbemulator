@@ -53,14 +53,14 @@ impl<'a> Cpu<'a> {
         };
 
         /*match op_code {
-            Opcode::Regular(value) => {
-                println!("PC: 0x{:X} 0x{:X}: {}",self.registers.pc, value, instruction.description);
-            },
-            Opcode::CB(value) => {
-                println!("PC: 0x{:X} CB 0x{:X}: {}",self.registers.pc, value, instruction.description);
-            }
-        }*/
-
+                    Opcode::Regular(value) => {
+                        println!("PC: 0x{:X} 0x{:X}: {}",self.registers.pc, value, instruction.description);
+                    },
+                    Opcode::CB(value) => {
+                        println!("PC: 0x{:X} CB 0x{:X}: {}",self.registers.pc, value, instruction.description);
+                    }
+                }
+        */
         let result = (instruction.handler)(self, &op_code);
 
         //Use the correct value if action of conditional instruction is taken or not
