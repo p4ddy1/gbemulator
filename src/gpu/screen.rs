@@ -1,66 +1,75 @@
 use crate::gpu::{Pixel, SCALE, SCREEN_HEIGHT, SCREEN_MAX_PIXELS, SCREEN_WIDTH};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::Canvas;
+use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
 pub trait Screen {
-    fn render(&mut self, screen_buffer: &[[Pixel; SCREEN_MAX_PIXELS]; SCREEN_MAX_PIXELS]);
+    fn render(&mut self, screen_buffer: &[Pixel; 65536]);
     fn present(&mut self);
 }
 
-//TODO: This rendering module in inefficent and should only used for testing
-pub struct SdlScreen {
-    pub width: u8,
-    pub height: u8,
+pub struct SdlScreen<'a> {
+    pub width: u16,
+    pub height: u16,
     canvas: Canvas<Window>,
+    texture: Texture<'a>,
+    buffer: Vec<u8>,
 }
 
-impl SdlScreen {
-    pub fn new(canvas: Canvas<Window>) -> SdlScreen {
+impl<'a> SdlScreen<'a> {
+    pub fn new(
+        canvas: Canvas<Window>,
+        texture: Texture<'a>,
+        width: u16,
+        height: u16,
+    ) -> SdlScreen<'a> {
         SdlScreen {
-            width: SCREEN_WIDTH,
-            height: SCREEN_HEIGHT,
+            width: width,
+            height: height,
             canvas: canvas,
+            texture: texture,
+            buffer: vec![255; SCREEN_WIDTH as usize * SCREEN_HEIGHT as usize * 3],
         }
     }
 
-    fn draw_pixel(&mut self, y: i32, x: i32) {
-        self.canvas
-            .fill_rect(Rect::new(
-                x * SCALE as i32,
-                y * SCALE as i32,
-                SCALE as u32,
-                SCALE as u32,
-            ))
-            .unwrap();
+    fn draw_pixel_to_buffer(&mut self, y: usize, x: usize, r: u8, g: u8, b: u8) {
+        let offset = (SCREEN_WIDTH * 3 * y) + x * 3;
+        self.buffer[offset] = b;
+        self.buffer[offset + 1] = g;
+        self.buffer[offset + 2] = r;
     }
 }
 
-impl Screen for SdlScreen {
-    fn render(&mut self, screen_buffer: &[[Pixel; SCREEN_MAX_PIXELS]; SCREEN_MAX_PIXELS]) {
+impl<'a> Screen for SdlScreen<'a> {
+    fn render(&mut self, screen_buffer: &[Pixel; 65536]) {
         self.canvas.clear();
 
-        for y in 0..self.height as usize {
-            for x in 0..self.width as usize {
-                let pixel = screen_buffer[y][x];
+        for y in 0..SCREEN_HEIGHT {
+            for x in 0..SCREEN_WIDTH {
+                let pixel = screen_buffer[y as usize + 256 * x as usize];
+
                 match pixel {
-                    Pixel::On => {
-                        self.canvas.set_draw_color(Color::RGB(255, 255, 255));
-                    }
-                    Pixel::Light => {
-                        self.canvas.set_draw_color(Color::RGB(200, 200, 200));
-                    }
-                    Pixel::Dark => {
-                        self.canvas.set_draw_color(Color::RGB(100, 100, 100));
-                    }
-                    Pixel::Off => {
-                        self.canvas.set_draw_color(Color::RGB(0, 0, 0));
-                    }
+                    Pixel::On => self.draw_pixel_to_buffer(y, x, 255, 255, 255),
+                    Pixel::Light => self.draw_pixel_to_buffer(y, x, 200, 200, 200),
+                    Pixel::Dark => self.draw_pixel_to_buffer(y, x, 100, 100, 100),
+                    Pixel::Off => self.draw_pixel_to_buffer(y, x, 0, 0, 0),
                 }
-                self.draw_pixel(y as i32, x as i32);
             }
         }
+
+        self.texture.update(
+            Rect::new(0, 0, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32),
+            &self.buffer,
+            SCREEN_WIDTH as usize * 3,
+        );
+        self.canvas
+            .copy(
+                &self.texture,
+                None,
+                Some(Rect::new(0, 0, self.width as u32, self.height as u32)),
+            )
+            .unwrap();
     }
 
     fn present(&mut self) {

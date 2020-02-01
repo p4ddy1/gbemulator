@@ -37,7 +37,7 @@ pub struct Gpu<'a> {
     pub scroll_y: u8,
     pub current_scanline: u8,
     pub screen: &'a mut dyn Screen,
-    screen_buffer: [[Pixel; SCREEN_MAX_PIXELS]; SCREEN_MAX_PIXELS],
+    screen_buffer: [Pixel; 65536],
     pub lcdc: u8,
     pub v_blank: bool, //TODO: Remove!! only for testing!!!
     bg_pal: [Pixel; 4],
@@ -54,7 +54,7 @@ impl<'a> Gpu<'a> {
             scroll_y: 0,
             current_scanline: 0,
             screen: screen,
-            screen_buffer: [[Pixel::Off; SCREEN_MAX_PIXELS]; SCREEN_MAX_PIXELS],
+            screen_buffer: [Pixel::Off; 65536],
             lcdc: 0,
             v_blank: true,
             bg_pal: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
@@ -98,7 +98,7 @@ impl<'a> Gpu<'a> {
     fn clear_screen_buffer(&mut self) {
         for y in 0..256 {
             for x in 0..256 {
-                self.screen_buffer[y][x] = Pixel::Off;
+                self.screen_buffer[y + 256 * x] = Pixel::Off;
             }
         }
     }
@@ -216,15 +216,16 @@ impl<'a> Gpu<'a> {
                         pixel = self.bg_pal[2];
                     }
 
-                    self.screen_buffer[self.current_scanline as usize]
-                        [sprite_x as usize + x as usize] = pixel;
+                    self.screen_buffer
+                        [self.current_scanline as usize + 256 * (sprite_x as usize + x as usize)] =
+                        pixel;
                 }
             }
         }
     }
 
     fn render_background_line(&mut self) {
-        let y_bgmap = self.current_scanline.wrapping_add(self.scroll_y);
+        let y_bgmap = self.current_scanline.wrapping_add(self.scroll_y) as u16;
 
         //Each tile consists of 8 lines so we stay at one tile for 8 scanlines
         let y_tile_address = BGMAP_BEGIN_ADDRESS + (y_bgmap as u16 / 8 * 32);
@@ -257,9 +258,9 @@ impl<'a> Gpu<'a> {
             }
 
             //Each tile consists of one byte at the y axes
-            let tile_data_address = tile_begin_address + (y_bgmap % 8 * 2) as u16;
+            let tile_data_address = tile_begin_address + (y_bgmap % 8 * 2);
             //The color data sits one byte after the pixel data
-            let tile_color_data_address = tile_begin_address + (y_bgmap % 8 * 2) as u16 + 1;
+            let tile_color_data_address = tile_begin_address + (y_bgmap % 8 * 2) + 1;
 
             let tile_data = self.read_vram(tile_data_address);
             let tile_color_data = self.read_vram(tile_color_data_address);
@@ -285,7 +286,7 @@ impl<'a> Gpu<'a> {
                 pixel = self.bg_pal[2];
             }
 
-            self.screen_buffer[self.current_scanline as usize][x as usize] = pixel;
+            self.screen_buffer[self.current_scanline as usize + 256 * x as usize] = pixel
         }
     }
 }

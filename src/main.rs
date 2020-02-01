@@ -7,6 +7,7 @@ use crate::io::joypad::{Joypad, Key};
 use crate::memory::mmu::Mmu;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::pixels::PixelFormatEnum;
 use std::thread;
 use std::time::Duration;
 
@@ -18,7 +19,7 @@ mod memory;
 mod util;
 
 fn main() {
-    let cartridge = match Cartridge::new_from_file("testrom/drmario.gb") {
+    let cartridge = match Cartridge::new_from_file("testrom/tetris.gb") {
         Ok(c) => c,
         Err(e) => {
             panic!(e);
@@ -32,23 +33,32 @@ fn main() {
         }
     };
 
+    //TODO: This SDL stuff is just for testing purposes. In the future a better method is needed with some GUI stuff
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
         .window(
-            "gb",
+            "Gameboy Emulator",
             SCREEN_WIDTH as u32 * SCALE as u32,
             SCREEN_HEIGHT as u32 * SCALE as u32,
         )
-        .opengl()
         .position_centered()
         .build()
         .unwrap();
 
     let canvas = window.into_canvas().build().unwrap();
-    let mut event_pump = sdl_context.event_pump().unwrap();
+    let texture_creator = canvas.texture_creator();
+    let mut texture = texture_creator
+        .create_texture_streaming(PixelFormatEnum::RGB24, 160, 144)
+        .unwrap();
+    let mut screen = SdlScreen::new(
+        canvas,
+        texture,
+        SCREEN_WIDTH as u16 * SCALE as u16,
+        SCREEN_HEIGHT as u16 * SCALE as u16,
+    );
 
-    let mut screen = SdlScreen::new(canvas);
+    let mut event_pump = sdl_context.event_pump().unwrap();
     let mut joypad = Joypad::new();
 
     let mut gpu = Gpu::new(&mut screen);
