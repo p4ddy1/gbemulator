@@ -109,7 +109,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "RLC (B..A)",
             handler: |cpu: &mut Cpu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
-                let result = functions::rotate_left(cpu, value);
+                let result = functions::rotate_left(cpu, value, true);
                 write_by_opcode(op_code, result, cpu);
                 ExecutionType::None
             },
@@ -120,7 +120,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "RLC (HL)",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_left(cpu, read_hl_addr(cpu));
+                let result = functions::rotate_left(cpu, read_hl_addr(cpu), true);
                 write_hl_addr(result, cpu);
                 ExecutionType::None
             },
@@ -132,7 +132,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "RRC (B..A)",
             handler: |cpu: &mut Cpu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
-                let result = functions::rotate_right(cpu, value);
+                let result = functions::rotate_right(cpu, value, true);
                 write_by_opcode(op_code, result, cpu);
                 ExecutionType::None
             },
@@ -143,7 +143,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "RRC (HL)",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_right(cpu, read_hl_addr(cpu));
+                let result = functions::rotate_right(cpu, read_hl_addr(cpu), true);
                 write_hl_addr(result, cpu);
                 ExecutionType::None
             },
@@ -155,7 +155,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "RL (B..A)",
             handler: |cpu: &mut Cpu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
-                let result = functions::rotate_left_through_carry(cpu, value);
+                let result = functions::rotate_left_through_carry(cpu, value, true);
                 write_by_opcode(op_code, result, cpu);
                 ExecutionType::None
             },
@@ -166,7 +166,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "RL (HL)",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_left_through_carry(cpu, read_hl_addr(cpu));
+                let result = functions::rotate_left_through_carry(cpu, read_hl_addr(cpu), true);
                 write_hl_addr(result, cpu);
                 ExecutionType::None
             },
@@ -178,7 +178,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "RR (B..A)",
             handler: |cpu: &mut Cpu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
-                let result = functions::rotate_right_through_carry(cpu, value);
+                let result = functions::rotate_right_through_carry(cpu, value, true);
                 write_by_opcode(op_code, result, cpu);
                 ExecutionType::None
             },
@@ -189,7 +189,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "RR (HL)",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_right_through_carry(cpu, read_hl_addr(cpu));
+                let result = functions::rotate_right_through_carry(cpu, read_hl_addr(cpu), true);
                 write_hl_addr(result, cpu);
                 ExecutionType::None
             },

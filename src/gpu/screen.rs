@@ -35,9 +35,9 @@ impl<'a> SdlScreen<'a> {
 
     fn draw_pixel_to_buffer(&mut self, y: usize, x: usize, r: u8, g: u8, b: u8) {
         let offset = (SCREEN_WIDTH * 3 * y) + x * 3;
-        self.buffer[offset] = b;
+        self.buffer[offset] = r;
         self.buffer[offset + 1] = g;
-        self.buffer[offset + 2] = r;
+        self.buffer[offset + 2] = b;
     }
 }
 
@@ -50,19 +50,22 @@ impl<'a> Screen for SdlScreen<'a> {
                 let pixel = screen_buffer[y as usize + 256 * x as usize];
 
                 match pixel {
-                    Pixel::On => self.draw_pixel_to_buffer(y, x, 255, 255, 255),
-                    Pixel::Light => self.draw_pixel_to_buffer(y, x, 200, 200, 200),
-                    Pixel::Dark => self.draw_pixel_to_buffer(y, x, 100, 100, 100),
-                    Pixel::Off => self.draw_pixel_to_buffer(y, x, 0, 0, 0),
+                    Pixel::On => self.draw_pixel_to_buffer(y, x, 255, 246, 211),
+                    Pixel::Light => self.draw_pixel_to_buffer(y, x, 249, 168, 117),
+                    Pixel::Dark => self.draw_pixel_to_buffer(y, x, 235, 107, 111),
+                    Pixel::Off => self.draw_pixel_to_buffer(y, x, 124, 63, 88),
                 }
             }
         }
 
-        self.texture.update(
-            Rect::new(0, 0, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32),
-            &self.buffer,
-            SCREEN_WIDTH as usize * 3,
-        );
+        self.texture
+            .update(
+                Rect::new(0, 0, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32),
+                &self.buffer,
+                SCREEN_WIDTH as usize * 3,
+            )
+            .unwrap();
+
         self.canvas
             .copy(
                 &self.texture,

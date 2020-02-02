@@ -2,7 +2,7 @@ use crate::cpu::cpu::Cpu;
 use crate::cpu::registers::Flag;
 use crate::util::binary::{bytes_to_word, is_bit_set};
 
-pub fn rotate_left(cpu: &mut Cpu, value: u8) -> u8 {
+pub fn rotate_left(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
     let mut result = value << 1;
 
     //If bit 7 is set, set bit 0 because bit 7 will get shifted out
@@ -12,7 +12,7 @@ pub fn rotate_left(cpu: &mut Cpu, value: u8) -> u8 {
 
     cpu.registers.clear_all_flags();
 
-    if result == 0 {
+    if result == 0 && check_for_zero {
         cpu.registers.set_flag(Flag::Z);
     }
 
@@ -25,7 +25,7 @@ pub fn rotate_left(cpu: &mut Cpu, value: u8) -> u8 {
 }
 
 //Rotate left through carry flag
-pub fn rotate_left_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
+pub fn rotate_left_through_carry(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
     let mut result = value << 1;
 
     //Carry occcured so set LSB
@@ -35,7 +35,7 @@ pub fn rotate_left_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
 
     cpu.registers.clear_all_flags();
 
-    if result == 0 {
+    if result == 0 && check_for_zero {
         cpu.registers.set_flag(Flag::Z);
     }
 
@@ -47,7 +47,7 @@ pub fn rotate_left_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
     result
 }
 
-pub fn rotate_right(cpu: &mut Cpu, value: u8) -> u8 {
+pub fn rotate_right(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
     let mut result = value >> 1;
 
     //If bit 0 is set, set bit 7 because bit 0 will get shifted out
@@ -57,7 +57,7 @@ pub fn rotate_right(cpu: &mut Cpu, value: u8) -> u8 {
 
     cpu.registers.clear_all_flags();
 
-    if result == 0 {
+    if result == 0 && check_for_zero {
         cpu.registers.set_flag(Flag::Z);
     }
 
@@ -69,7 +69,7 @@ pub fn rotate_right(cpu: &mut Cpu, value: u8) -> u8 {
     result
 }
 
-pub fn rotate_right_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
+pub fn rotate_right_through_carry(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
     let mut result = value >> 1;
 
     if cpu.registers.check_flag(Flag::C) {
@@ -78,7 +78,7 @@ pub fn rotate_right_through_carry(cpu: &mut Cpu, value: u8) -> u8 {
 
     cpu.registers.clear_all_flags();
 
-    if result == 0 {
+    if result == 0 && check_for_zero {
         cpu.registers.set_flag(Flag::Z);
     }
 
@@ -129,7 +129,11 @@ pub fn sla(cpu: &mut Cpu, value: u8) -> u8 {
 
 pub fn sra(cpu: &mut Cpu, value: u8) -> u8 {
     cpu.registers.clear_all_flags();
-    let result = value >> 1;
+    let mut result = value >> 1;
+
+    if is_bit_set(value, 7) {
+        result |= 0x80;
+    }
 
     if result == 0 {
         cpu.registers.set_flag(Flag::Z);
@@ -195,7 +199,7 @@ pub fn increment_byte(cpu: &mut Cpu, value: u8) -> u8 {
     }
 
     //Carry from bit 3 occured?
-    if (result & 0xf) + (1 & 0xf) > 0xF {
+    if (value & 0xf) + (1 & 0xf) > 0xF {
         cpu.registers.set_flag(Flag::H);
     }
 
@@ -263,17 +267,17 @@ pub fn substract_bytes_carry(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
     result = result.wrapping_sub(carry);
 
     cpu.registers.clear_all_flags();
+    cpu.registers.set_flag(Flag::N);
 
     if result == 0 {
         cpu.registers.set_flag(Flag::Z);
     }
 
-    //TODO: Check if this is correct
     if (byte1 & 0xf) < (byte2 & 0xf) + carry {
         cpu.registers.set_flag(Flag::H);
     }
 
-    if (byte1 & 0xff) < (byte2 & 0xff) + carry {
+    if (byte1 as u16 & 0xff) < (byte2 as u16 & 0xff) + carry as u16 {
         cpu.registers.set_flag(Flag::C);
     }
 
@@ -330,13 +334,11 @@ pub fn add_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
 pub fn add_words(cpu: &mut Cpu, word1: u16, word2: u16) -> u16 {
     let result = word1.wrapping_add(word2);
 
-    cpu.registers.clear_all_flags();
+    cpu.registers.clear_flag(Flag::H);
+    cpu.registers.clear_flag(Flag::N);
+    cpu.registers.clear_flag(Flag::C);
 
-    if result == 0 {
-        cpu.registers.set_flag(Flag::Z);
-    }
-
-    if (word1 & 0x7FFF) + (word2 & 0x7FFF) > 0x7FFF {
+    if (word1 & 0xFFF) + (word2 & 0xFFF) > 0xFFF {
         cpu.registers.set_flag(Flag::H);
     }
 

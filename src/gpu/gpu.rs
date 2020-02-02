@@ -163,7 +163,7 @@ impl<'a> Gpu<'a> {
     }
 
     fn render_sprite_line(&mut self) {
-        //TODO: Scroll_X is missing, implement sprite options, palette and prio
+        //TODO: Scroll_X is missing, y flip, palette
 
         let current_line = self.current_scanline.wrapping_add(self.scroll_y);
 
@@ -195,30 +195,47 @@ impl<'a> Gpu<'a> {
                 let tile_color_data = self.read_vram(tile_color_data_address);
 
                 for x in 0..8 {
+                    let offset =
+                        self.current_scanline as usize + 256 * (sprite_x as usize + x as usize);
+
+                    //Handle sprite priority
+                    if is_bit_set(sprite_options, 7) {
+                        match self.screen_buffer[offset] {
+                            Pixel::On => {}
+                            _ => continue,
+                        };
+                    }
+
+                    //X Flip
+                    let pixel_index = if is_bit_set(sprite_options, 5) {
+                        x
+                    } else {
+                        7 - x
+                    };
+
                     //Checking each bit of the tile and setting the according pixel on the framebuffer
-                    let pixel_is_active = is_bit_set(tile_data, 7 - x);
-                    let pixel_color_bit = is_bit_set(tile_color_data, 7 - x);
-                    let mut pixel = Pixel::Off;
+                    let pixel_is_active = is_bit_set(tile_data, pixel_index);
+                    let pixel_color_bit = is_bit_set(tile_color_data, pixel_index);
+                    let mut pixel: Option<Pixel> = None;
+
+                    //Color 0 on sprites is transparent
 
                     if pixel_is_active && pixel_color_bit {
-                        pixel = self.bg_pal[3];
+                        pixel = Some(self.bg_pal[3]);
                     }
 
                     if pixel_is_active && !pixel_color_bit {
-                        pixel = self.bg_pal[1];
-                    }
-
-                    if !pixel_is_active && !pixel_color_bit {
-                        pixel = self.bg_pal[0];
+                        pixel = Some(self.bg_pal[1]);
                     }
 
                     if !pixel_is_active && pixel_color_bit {
-                        pixel = self.bg_pal[2];
+                        pixel = Some(self.bg_pal[2]);
                     }
 
-                    self.screen_buffer
-                        [self.current_scanline as usize + 256 * (sprite_x as usize + x as usize)] =
-                        pixel;
+                    match pixel {
+                        Some(value) => self.screen_buffer[offset] = value,
+                        _ => {}
+                    }
                 }
             }
         }

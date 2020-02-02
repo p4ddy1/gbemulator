@@ -26,6 +26,19 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
+        0x02 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD (BC),A",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.mmu.write(
+                    binary::bytes_to_word(cpu.registers.b, cpu.registers.c),
+                    cpu.registers.a,
+                );
+                ExecutionType::None
+            },
+        }),
         0x03 => Some(&Instruction {
             length: 1,
             clock_cycles: 8,
@@ -76,7 +89,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "RLCA",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                cpu.registers.a = rotate_left(cpu, cpu.registers.a);
+                cpu.registers.a = rotate_left(cpu, cpu.registers.a, false);
                 ExecutionType::None
             },
         }),
@@ -168,6 +181,16 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
+        0x0F => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "RRCA",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a = functions::rotate_right(cpu, cpu.registers.a, false);
+                ExecutionType::None
+            },
+        }),
         0x11 => Some(&Instruction {
             length: 3,
             clock_cycles: 12,
@@ -242,7 +265,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "RLA",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                cpu.registers.a = functions::rotate_left_through_carry(cpu, cpu.registers.a);
+                cpu.registers.a = functions::rotate_left_through_carry(cpu, cpu.registers.a, false);
                 ExecutionType::None
             },
         }),
@@ -330,7 +353,17 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
-        //TODO: 0x1F
+        0x1F => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "RRA",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a =
+                    functions::rotate_right_through_carry(cpu, cpu.registers.a, false);
+                ExecutionType::None
+            },
+        }),
         0x20 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -418,7 +451,39 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DAA",
-            handler: |_: &mut Cpu, _: &Opcode| ExecutionType::None, //TODO: Implement DAA
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.clear_flag(Flag::Z);
+
+                //Flag N will be set after a substraction
+                if cpu.registers.check_flag(Flag::N) {
+                    //If carry has occured substract 6 from upper nibble
+                    if cpu.registers.check_flag(Flag::C) {
+                        cpu.registers.a = cpu.registers.a.wrapping_sub(0x60);
+                    }
+                    //If half-carry has occured substract 6 from lower nibble
+                    if cpu.registers.check_flag(Flag::H) {
+                        cpu.registers.a = cpu.registers.a.wrapping_sub(0x6);
+                    }
+                }
+                //Flag N is reset after an addition
+                else {
+                    if cpu.registers.check_flag(Flag::C) || cpu.registers.a > 0x99 {
+                        cpu.registers.a = cpu.registers.a.wrapping_add(0x60);
+                        cpu.registers.set_flag(Flag::C);
+                    }
+
+                    if cpu.registers.check_flag(Flag::H) || (cpu.registers.a & 0x0f) > 0x09 {
+                        cpu.registers.a = cpu.registers.a.wrapping_add(0x6);
+                    }
+                }
+
+                if cpu.registers.a == 0 {
+                    cpu.registers.set_flag(Flag::Z);
+                }
+
+                cpu.registers.clear_flag(Flag::H);
+                ExecutionType::None
+            },
         }),
         0x28 => Some(&Instruction {
             length: 2,
@@ -605,7 +670,18 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
-        //TODO: 0x37
+        0x37 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "SCF",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.set_flag(Flag::C);
+                cpu.registers.clear_flag(Flag::N);
+                cpu.registers.clear_flag(Flag::H);
+                ExecutionType::None
+            },
+        }),
         0x38 => Some(&Instruction {
             length: 2,
             clock_cycles: 8,
@@ -690,7 +766,23 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::None
             },
         }),
-        //TODO: 0x3F
+        0x3F => Some(&Instruction {
+            length: 1,
+            clock_cycles: 4,
+            clock_cycles_condition: None,
+            description: "CCF",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                if cpu.registers.check_flag(Flag::C) {
+                    cpu.registers.clear_flag(Flag::C);
+                } else {
+                    cpu.registers.set_flag(Flag::C);
+                }
+
+                cpu.registers.clear_flag(Flag::N);
+                cpu.registers.clear_flag(Flag::H);
+                ExecutionType::None
+            },
+        }),
         0x40 => Some(&Instruction {
             length: 1,
             clock_cycles: 4,
@@ -1349,7 +1441,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "LD A,A",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                cpu.registers.a = cpu.registers.l;
+                cpu.registers.a = cpu.registers.a;
                 ExecutionType::None
             },
         }),
@@ -2152,6 +2244,20 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 ExecutionType::Jumped
             },
         }),
+        0xCE => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "ADC A,n",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a = functions::add_bytes_carry(
+                    cpu,
+                    cpu.registers.a,
+                    cpu.get_attribute_for_op_code(0),
+                );
+                ExecutionType::None
+            },
+        }),
         0xCF => Some(&Instruction {
             length: 1,
             clock_cycles: 16,
@@ -2259,6 +2365,20 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                 cpu.registers.pc = cpu.mmu.read_word(cpu.registers.sp);
                 cpu.registers.sp += 2;
                 ExecutionType::Jumped
+            },
+        }),
+        0xDE => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "SBC A,n",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a = functions::substract_bytes_carry(
+                    cpu,
+                    cpu.registers.a,
+                    cpu.get_attribute_for_op_code(0),
+                );
+                ExecutionType::None
             },
         }),
         0xDF => Some(&Instruction {
@@ -2433,6 +2553,42 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             handler: |cpu: &mut Cpu, _: &Opcode| {
                 cpu.registers.a =
                     functions::or_bytes(cpu, cpu.registers.a, cpu.get_attribute_for_op_code(0));
+                ExecutionType::None
+            },
+        }),
+        0xF8 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 12,
+            clock_cycles_condition: None,
+            description: "LD HL,SP+n",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                //TODO: Set H and C flag
+
+                let value = cpu.get_attribute_for_op_code(0);
+                let result = if value < 127 {
+                    cpu.registers.sp + value as u16
+                } else {
+                    cpu.registers.sp - 256 - value as u16
+                };
+
+                let (byte1, byte2) = binary::word_to_bytes(result);
+
+                cpu.registers.h = byte1;
+                cpu.registers.l = byte2;
+
+                ExecutionType::None
+            },
+        }),
+        0xF9 => Some(&Instruction {
+            length: 1,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD SP,HL",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                let (byte1, byte2) = binary::word_to_bytes(cpu.registers.sp);
+                cpu.registers.h = byte1;
+                cpu.registers.l = byte2;
+
                 ExecutionType::None
             },
         }),
