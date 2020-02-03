@@ -1,4 +1,5 @@
-use crate::cartridge::cartridge::Cartridge;
+use crate::cartridge::mbc1_cartridge::Mbc1Cartridge;
+use crate::cartridge::small_cartridge::SmallCartridge;
 use crate::cpu::cpu::Cpu;
 use crate::gpu::gpu::Gpu;
 use crate::gpu::screen::SdlScreen;
@@ -19,14 +20,15 @@ mod memory;
 mod util;
 
 fn main() {
-    let cartridge = match Cartridge::new_from_file("testrom/tetris.gb") {
-        Ok(c) => c,
-        Err(e) => {
-            panic!(e);
-        }
-    };
+    let mut cartridge =
+        match Mbc1Cartridge::new_from_file("testrom/cpu_instrs/individual/03-op sp,hl.gb") {
+            Ok(c) => c,
+            Err(e) => {
+                panic!(e);
+            }
+        };
 
-    let bios = match Cartridge::new_from_file("testrom/bios.gb") {
+    let bios = match SmallCartridge::new_from_file("testrom/bios.gb") {
         Ok(c) => c,
         Err(e) => {
             panic!(e);
@@ -62,7 +64,7 @@ fn main() {
     let mut joypad = Joypad::new();
 
     let mut gpu = Gpu::new(&mut screen);
-    let mut mmu = Mmu::new(&cartridge, &mut gpu, Some(&bios), &mut joypad);
+    let mut mmu = Mmu::new(&mut cartridge, &mut gpu, Some(&bios), &mut joypad);
     let mut cpu = Cpu::new(&mut mmu);
 
     const CPU_CLOCK_HZ: usize = 4194304;
@@ -201,6 +203,6 @@ fn main() {
 
         cpu.mmu.gpu.screen.present();
 
-        thread::sleep(Duration::from_nanos(FRAME_TIME_NS));
+        //thread::sleep(Duration::from_nanos(FRAME_TIME_NS));
     }
 }

@@ -1,6 +1,6 @@
+use crate::cartridge::Cartridge;
 use crate::io::joypad::Joypad;
 use crate::util::binary;
-use crate::Cartridge;
 use crate::Gpu;
 
 const EXT_RAM_SIZE: usize = 8192;
@@ -28,9 +28,9 @@ pub enum Opcode {
 }
 
 pub struct Mmu<'a> {
-    cartridge: &'a Cartridge,
+    cartridge: &'a mut dyn Cartridge,
     pub gpu: &'a mut Gpu<'a>,
-    bios: Option<&'a Cartridge>,
+    bios: Option<&'a dyn Cartridge>,
     ext_ram: [u8; EXT_RAM_SIZE],
     w_ram: [u8; W_RAM_SIZE],
     echo_ram: [u8; ECHO_RAM_SIZE],
@@ -46,9 +46,9 @@ pub struct Mmu<'a> {
 
 impl<'a> Mmu<'a> {
     pub fn new(
-        cartridge: &'a Cartridge,
+        cartridge: &'a mut dyn Cartridge,
         gpu: &'a mut Gpu<'a>,
-        bios: Option<&'a Cartridge>,
+        bios: Option<&'a dyn Cartridge>,
         joypad: &'a mut Joypad,
     ) -> Mmu<'a> {
         Mmu {
@@ -71,12 +71,16 @@ impl<'a> Mmu<'a> {
 
     pub fn write(&mut self, address: u16, value: u8) {
         match address {
-
-
+            0x0..=0x7FFF => {
+               if self.is_booted {
+                   self.cartridge.write(address, value);
+               }
+            }
             0xFF50 => self.is_booted = true,
             INTERRUPT_FLAGS_ADDRESS => self.interrupt_flags = value,
             VRAM_ADDRESS..=0x9FFF => self.gpu.write_vram(address, value),
-            EXT_RAM_ADDRESS..=0xBFFF => self.ext_ram[(address - EXT_RAM_ADDRESS) as usize] = value,
+            //TODO: Hook this up to the cartridge
+            EXT_RAM_ADDRESS..=0xBFFF => self.cartridge.write_ram(address, value),
             W_RAM_ADDRESS..=0xDFFF => {
                 self.w_ram[(address - W_RAM_ADDRESS) as usize] = value
             }
@@ -92,6 +96,11 @@ impl<'a> Mmu<'a> {
             IO_ADDRESS..=0xFF7E => {
                 if address == 0xFF00 {
                     self.joypad.select_keys_by_write(value);
+                }
+
+                if address == 0xFF01 {
+                    //Serial out
+                    print!("{}", value as char);
                 }
 
                 if address == 0xFF04 {
@@ -164,7 +173,7 @@ impl<'a> Mmu<'a> {
             }
             USER_PROGRAM_AREA_ADDRESS..=0x7FFF => self.cartridge.read(address),
             VRAM_ADDRESS..=0x9FFF => self.gpu.read_vram(address),
-            EXT_RAM_ADDRESS..=0xBFFF => self.ext_ram[(address - EXT_RAM_ADDRESS) as usize],
+            EXT_RAM_ADDRESS..=0xBFFF => self.cartridge.read_ram(address),
             W_RAM_ADDRESS..=0xDFFF => self.w_ram[(address - W_RAM_ADDRESS) as usize],
             //TODO: What is 0xFDFE??
             ECHO_RAM_ADDRESS..=0xFDFE => self.echo_ram[(address - ECHO_RAM_ADDRESS) as usize],

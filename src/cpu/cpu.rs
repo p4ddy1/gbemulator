@@ -48,19 +48,24 @@ impl<'a> Cpu<'a> {
                         value, self.registers.pc
                     ),
                 };
+
                 std::process::exit(1);
             }
         };
 
-        /*match op_code {
-                    Opcode::Regular(value) => {
-                        println!("PC: 0x{:X} 0x{:X}: {}",self.registers.pc, value, instruction.description);
-                    },
-                    Opcode::CB(value) => {
-                        println!("PC: 0x{:X} CB 0x{:X}: {}",self.registers.pc, value, instruction.description);
-                    }
-                }
-        */
+        /*   match op_code {
+            Opcode::Regular(value) => {
+                println!("PC: 0x{:X} 0x{:X}: {}",self.registers.pc, value, instruction.description);
+            },
+            Opcode::CB(value) => {
+                println!("PC: 0x{:X} CB 0x{:X}: {}",self.registers.pc, value, instruction.description);
+            }
+        }*/
+
+        /*if self.registers.pc == 0xC007 {
+            println!("0x{:X}", self.registers.a);
+        }*/
+
         let result = (instruction.handler)(self, &op_code);
 
         //Use the correct value if action of conditional instruction is taken or not
