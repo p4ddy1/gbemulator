@@ -144,7 +144,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "DEC BC",
             handler: |cpu: &mut Cpu, _: &Opcode| {
                 let mut value = bytes_to_word(cpu.registers.b, cpu.registers.c);
-                value -= 1;
+                value = value.wrapping_sub(1);
                 let (byte1, byte2) = word_to_bytes(value);
                 cpu.registers.b = byte1;
                 cpu.registers.c = byte2;
@@ -326,7 +326,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "DEC DE",
             handler: |cpu: &mut Cpu, _: &Opcode| {
                 let mut value = bytes_to_word(cpu.registers.d, cpu.registers.e);
-                value -= 1;
+                value = value.wrapping_sub(1);
                 let (byte1, byte2) = word_to_bytes(value);
                 cpu.registers.d = byte1;
                 cpu.registers.e = byte2;
@@ -546,7 +546,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "DEC HL",
             handler: |cpu: &mut Cpu, _: &Opcode| {
                 let mut value = bytes_to_word(cpu.registers.h, cpu.registers.l);
-                value -= 1;
+                value = value.wrapping_sub(1);
                 let (byte1, byte2) = word_to_bytes(value);
                 cpu.registers.h = byte1;
                 cpu.registers.l = byte2;
@@ -2126,8 +2126,8 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "POP BC",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                cpu.registers.b = cpu.mmu.read(cpu.registers.sp);
-                cpu.registers.c = cpu.mmu.read(cpu.registers.sp + 0x01);
+                cpu.registers.b = cpu.mmu.read(cpu.registers.sp + 0x01);
+                cpu.registers.c = cpu.mmu.read(cpu.registers.sp);
                 cpu.registers.sp += 2;
                 ExecutionType::None
             },
@@ -2322,8 +2322,8 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "POP DE",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                cpu.registers.d = cpu.mmu.read(cpu.registers.sp);
-                cpu.registers.e = cpu.mmu.read(cpu.registers.sp + 1);
+                cpu.registers.d = cpu.mmu.read(cpu.registers.sp + 1);
+                cpu.registers.e = cpu.mmu.read(cpu.registers.sp);
                 cpu.registers.sp += 2;
                 ExecutionType::None
             },
@@ -2496,8 +2496,8 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "POP HL",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                cpu.registers.h = cpu.mmu.read(cpu.registers.sp);
-                cpu.registers.l = cpu.mmu.read(cpu.registers.sp + 1);
+                cpu.registers.h = cpu.mmu.read(cpu.registers.sp + 1);
+                cpu.registers.l = cpu.mmu.read(cpu.registers.sp);
                 cpu.registers.sp += 2;
                 ExecutionType::None
             },
@@ -2554,19 +2554,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "ADD SP,n",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                //TODO: Set flags
-
-                cpu.registers.clear_all_flags();
-
-                let value = cpu.get_attribute_for_op_code(0);
-
-                let result = if value < 127 {
-                    cpu.registers.sp.wrapping_add(value as u16)
-                } else {
-                    cpu.registers.sp.wrapping_sub(256 - value as u16)
-                };
-
-                cpu.registers.sp = result;
+                cpu.registers.sp = functions::add_to_sp(cpu, cpu.get_attribute_for_op_code(0));
                 ExecutionType::None
             },
         }),
@@ -2633,10 +2621,20 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "POP AF",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                cpu.registers.a = cpu.mmu.read(cpu.registers.sp);
+                cpu.registers.a = cpu.mmu.read(cpu.registers.sp + 1);
                 //Only the upper 4 bits are writable
-                cpu.registers.f = 0xF0 & cpu.mmu.read(cpu.registers.sp + 1);
+                cpu.registers.f = 0xF0 & cpu.mmu.read(cpu.registers.sp);
                 cpu.registers.sp += 2;
+                ExecutionType::None
+            },
+        }),
+        0xF2 => Some(&Instruction {
+            length: 2,
+            clock_cycles: 8,
+            clock_cycles_condition: None,
+            description: "LD A,(C)",
+            handler: |cpu: &mut Cpu, _: &Opcode| {
+                cpu.registers.a = cpu.mmu.read(0xFF00 + cpu.registers.c as u16);
                 ExecutionType::None
             },
         }),
@@ -2691,15 +2689,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "LD HL,SP+n",
             handler: |cpu: &mut Cpu, _: &Opcode| {
-                //TODO: Set H and C flag
-
-                let value = cpu.get_attribute_for_op_code(0);
-                let result = if value < 127 {
-                    cpu.registers.sp.wrapping_add(value as u16)
-                } else {
-                    cpu.registers.sp.wrapping_sub(256 - value as u16)
-                };
-
+                let result = functions::add_to_sp(cpu, cpu.get_attribute_for_op_code(0));
                 let (byte1, byte2) = binary::word_to_bytes(result);
 
                 cpu.registers.h = byte1;
@@ -2730,8 +2720,6 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
                     cpu.get_attribute_for_op_code(1),
                     cpu.get_attribute_for_op_code(0),
                 );
-
-                //TODO: This is not working correctly
                 cpu.registers.a = cpu.mmu.read(addr);
                 ExecutionType::None
             },

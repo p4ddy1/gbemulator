@@ -152,8 +152,12 @@ impl<'a> Mmu<'a> {
     }
 
     pub fn write_word(&mut self, address: u16, value: u16) {
-        self.write(address, (value >> 8) as u8);
-        self.write(address + 0x01, value as u8);
+        self.write(address, value as u8);
+        self.write(address + 1, (value >> 8) as u8);
+    }
+
+    pub fn read_word(&self, address: u16) -> u16 {
+        binary::bytes_to_word(self.read(address + 1), self.read(address))
     }
 
     pub fn read(&self, address: u16) -> u8 {
@@ -215,10 +219,6 @@ impl<'a> Mmu<'a> {
             INTERRUPT_ENABLE_ADDRESS => self.interrupts_enabled,
             _ => 0,
         }
-    }
-
-    pub fn read_word(&self, address: u16) -> u16 {
-        binary::bytes_to_word(self.read(address), self.read(address + 0x01))
     }
 
     pub fn read_opcode(&self, pc: u16) -> Opcode {

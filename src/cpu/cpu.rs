@@ -33,6 +33,12 @@ impl<'a> Cpu<'a> {
             self.mmu.write(INTERRUPT_FLAGS_ADDRESS, 0x01);
         }
 
+        //TODO: Remove! Only for testing
+        if self.mmu.gpu.lcd_stat {
+            self.mmu.gpu.lcd_stat = false;
+            self.mmu.write(INTERRUPT_FLAGS_ADDRESS, 0x02);
+        }
+
         let op_code = self.mmu.read_opcode(self.registers.pc);
 
         let instruction = match instructions::get_instruction_by_op_code(&op_code) {

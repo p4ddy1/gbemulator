@@ -349,6 +349,35 @@ pub fn add_words(cpu: &mut Cpu, word1: u16, word2: u16) -> u16 {
     result
 }
 
+pub fn add_to_sp(cpu: &mut Cpu, value: u8) -> u16 {
+    let value_signed = value as i8;
+    let result = cpu.registers.sp.wrapping_add(value_signed as u16);
+
+    cpu.registers.clear_all_flags();
+
+    if value_signed > 0 {
+        //Addition
+        if (cpu.registers.sp & 0xFF) + value as u16 > 0xFF {
+            cpu.registers.set_flag(Flag::C);
+        }
+
+        if (cpu.registers.sp & 0xF) + (value as u16 & 0xF) > 0xF {
+            cpu.registers.set_flag(Flag::H);
+        }
+    } else {
+        //Substraction
+        if result & 0xFF < cpu.registers.sp & 0xFF {
+            cpu.registers.set_flag(Flag::C);
+        }
+
+        if result & 0xF < cpu.registers.sp & 0xF {
+            cpu.registers.set_flag(Flag::H);
+        }
+    }
+
+    result
+}
+
 pub fn or_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
     let result = byte1 | byte2;
 

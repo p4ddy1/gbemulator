@@ -20,13 +20,12 @@ mod memory;
 mod util;
 
 fn main() {
-    let mut cartridge =
-        match Mbc1Cartridge::new_from_file("testrom/cpu_instrs/individual/03-op sp,hl.gb") {
-            Ok(c) => c,
-            Err(e) => {
-                panic!(e);
-            }
-        };
+    let mut cartridge = match Mbc1Cartridge::new_from_file("testrom/cpu_instrs/cpu_instrs.gb") {
+        Ok(c) => c,
+        Err(e) => {
+            panic!(e);
+        }
+    };
 
     let bios = match SmallCartridge::new_from_file("testrom/bios.gb") {
         Ok(c) => c,

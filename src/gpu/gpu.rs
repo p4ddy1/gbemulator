@@ -39,7 +39,8 @@ pub struct Gpu<'a> {
     pub screen: &'a mut dyn Screen,
     screen_buffer: [Pixel; 65536],
     pub lcdc: u8,
-    pub v_blank: bool, //TODO: Remove!! only for testing!!!
+    pub v_blank: bool,  //TODO: Remove!! only for testing!!!
+    pub lcd_stat: bool, //TODO: Remove!! only for testing!!!
     bg_pal: [Pixel; 4],
 }
 
@@ -57,6 +58,7 @@ impl<'a> Gpu<'a> {
             screen_buffer: [Pixel::Off; 65536],
             lcdc: 0,
             v_blank: true,
+            lcd_stat: false,
             bg_pal: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
         }
     }
@@ -143,6 +145,7 @@ impl<'a> Gpu<'a> {
                         self.screen.render(&self.screen_buffer);
                         self.mode = Mode::Oam;
                         self.current_scanline = 0;
+                        self.lcd_stat = true; //TODO: Is this correct?
                     }
                 }
             }
