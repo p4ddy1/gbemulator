@@ -93,6 +93,11 @@ impl<'a> Cpu<'a> {
             None => {}
         }
 
+        if self.mmu.dma {
+            clock_cycles += 160;
+            self.mmu.dma = false;
+        }
+
         self.clock.cycle(clock_cycles as usize);
         self.mmu.gpu.step(clock_cycles);
         clock_cycles

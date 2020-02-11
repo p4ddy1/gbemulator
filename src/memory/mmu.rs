@@ -42,6 +42,7 @@ pub struct Mmu<'a> {
     is_booted: bool,
     pub joypad: &'a mut Joypad,
     divider: u8,
+    pub dma: bool //TODO: Remove
 }
 
 impl<'a> Mmu<'a> {
@@ -66,6 +67,7 @@ impl<'a> Mmu<'a> {
             is_booted: false,
             joypad: joypad,
             divider: 0,
+            dma: false
         }
     }
 
@@ -111,6 +113,10 @@ impl<'a> Mmu<'a> {
                     self.gpu.write_lcdc(value);
                 }
 
+                if address == 0xFF41 {
+                    self.gpu.stat = value;
+                }
+
                 if address == 0xFF42 {
                     self.gpu.scroll_y = value;
                 }
@@ -122,6 +128,11 @@ impl<'a> Mmu<'a> {
                 if address == BG_PAL_ADDR {
                     self.gpu.set_bgpal(value);
                 }
+
+                if address == 0xFF45 {
+                    self.gpu.write_lyc(value);
+                }
+
 
                 if address == 0xFF46 {
                     self.dma_transfer(value);
@@ -149,6 +160,7 @@ impl<'a> Mmu<'a> {
         }
         //TODO: Cycles are missing here
         //The transfer takes 160 machine cycles
+        self.dma = true;
     }
 
     pub fn write_word(&mut self, address: u16, value: u16) {
@@ -201,6 +213,10 @@ impl<'a> Mmu<'a> {
                     return self.gpu.lcdc;
                 }
 
+                if address == 0xFF41 {
+                    return self.gpu.stat;
+                }
+
                 if address == 0xFF42 {
                     return self.gpu.scroll_y;
                 }
@@ -211,6 +227,10 @@ impl<'a> Mmu<'a> {
 
                 if address == 0xFF44 {
                     return self.gpu.current_scanline;
+                }
+
+                if address == 0xFF45 {
+                    return self.gpu.lyc;
                 }
 
                 self.io[(address - IO_ADDRESS) as usize]

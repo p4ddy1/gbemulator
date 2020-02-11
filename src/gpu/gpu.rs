@@ -1,6 +1,7 @@
 use crate::gpu::screen::Screen;
 use crate::gpu::{Pixel, SCREEN_MAX_PIXELS};
-use crate::util::binary::is_bit_set;
+use crate::util::binary::{is_bit_set, set_bit_in_byte, reset_bit_in_byte};
+use sdl2::render::BlendMode::Mod;
 
 const VRAM_ADDRESS: u16 = 0x8000;
 const VRAM_SIZE: usize = 8192;
@@ -21,11 +22,12 @@ const CYCLES_VBLANK: u16 = 456;
 const SCANLINES_DISPLAY: u8 = 143;
 const MAX_SCANLINES: u8 = 153;
 
+#[derive(Copy, Clone)]
 enum Mode {
-    Oam,
-    Vram,
-    Hblank,
-    Vblank,
+    Oam = 2,
+    Vram = 3,
+    Hblank = 0,
+    Vblank = 1,
 }
 
 pub struct Gpu<'a> {
@@ -36,11 +38,13 @@ pub struct Gpu<'a> {
     pub scroll_x: u8,
     pub scroll_y: u8,
     pub current_scanline: u8,
+    pub lyc: u8,
     pub screen: &'a mut dyn Screen,
-    screen_buffer: [Pixel; 65536],
+    screen_buffer: [Pixel; 68000], //TODO: Find better length
     pub lcdc: u8,
     pub v_blank: bool,  //TODO: Remove!! only for testing!!!
     pub lcd_stat: bool, //TODO: Remove!! only for testing!!!
+    pub stat: u8,
     bg_pal: [Pixel; 4],
 }
 
@@ -54,11 +58,13 @@ impl<'a> Gpu<'a> {
             scroll_x: 0,
             scroll_y: 0,
             current_scanline: 0,
+            lyc: 0,
             screen: screen,
-            screen_buffer: [Pixel::Off; 65536],
+            screen_buffer: [Pixel::Off; 68000],
             lcdc: 0,
             v_blank: true,
             lcd_stat: false,
+            stat: 0x84,
             bg_pal: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
         }
     }
@@ -81,6 +87,50 @@ impl<'a> Gpu<'a> {
 
     pub fn write_lcdc(&mut self, value: u8) {
         self.lcdc = value;
+    }
+
+    pub fn write_lyc(&mut self, value: u8) {
+        self.lyc = value;
+        self.compare_lyc();
+    }
+
+    fn compare_lyc(&mut self) {
+        self.stat = reset_bit_in_byte(self.stat, 2);
+        if self.lyc == self.current_scanline {
+            self.stat = set_bit_in_byte(self.stat, 2);
+            if is_bit_set(self.stat, 6) {
+                self.lcd_stat = true;
+            } //TODO: Is this correct?
+        }
+    }
+
+    fn set_mode(&mut self, mode: Mode) {
+        self.stat &= 0xC0;
+        self.stat |= mode as u8 & 0x3F;
+        self.mode = mode;
+        self.fire_stat_interrupt();
+    }
+
+    fn fire_stat_interrupt(&mut self) {
+        //TODO: Is this correct?
+        match self.mode {
+            Mode::Oam => {
+                if is_bit_set(self.stat, 5) {
+                    self.lcd_stat = true;
+                }
+            },
+            Mode::Vram => {
+                if is_bit_set(self.stat, 3) {
+                    self.lcd_stat = true;
+                }
+            },
+            Mode::Vblank => {
+                if is_bit_set(self.stat, 4) {
+                    self.lcd_stat = true;
+                }
+            }
+            _ => {}
+        }
     }
 
     pub fn set_bgpal(&mut self, value: u8) {
@@ -108,32 +158,34 @@ impl<'a> Gpu<'a> {
     pub fn step(&mut self, cycles: u8) {
         self.clock += cycles as u16;
         self.step_set_mode();
+        self.compare_lyc();
     }
 
     fn step_set_mode(&mut self) {
         match self.mode {
             Mode::Oam => {
                 if self.clock >= CYCLES_OAM {
-                    self.mode = Mode::Vram;
+                    self.set_mode(Mode::Vram);
                     self.clock = 0;
                 }
             }
             Mode::Vram => {
                 if self.clock >= CYCLES_VRAM {
-                    self.mode = Mode::Hblank;
+                    self.set_mode(Mode::Hblank);
+                    self.render_scanline_to_screen();
                     self.clock = 0;
                 }
             }
             Mode::Hblank => {
                 if self.clock >= CYCLES_HBLANK {
-                    self.render_scanline_to_screen();
-                    self.current_scanline += 1;
                     self.clock = 0;
-                    if self.current_scanline > SCANLINES_DISPLAY {
-                        self.mode = Mode::Vblank;
+                    self.current_scanline += 1;
+                    if self.current_scanline >= SCANLINES_DISPLAY {
+                        self.set_mode(Mode::Vblank);
+                        self.screen.render(&self.screen_buffer);
                         self.v_blank = true; //TODO: Remove! only for testing
                     } else {
-                        self.mode = Mode::Oam;
+                        self.set_mode(Mode::Oam);
                     }
                 }
             }
@@ -142,10 +194,8 @@ impl<'a> Gpu<'a> {
                     self.current_scanline += 1;
                     self.clock = 0;
                     if self.current_scanline > MAX_SCANLINES {
-                        self.screen.render(&self.screen_buffer);
-                        self.mode = Mode::Oam;
+                        self.set_mode(Mode::Oam);
                         self.current_scanline = 0;
-                        self.lcd_stat = true; //TODO: Is this correct?
                     }
                 }
             }
@@ -251,7 +301,6 @@ impl<'a> Gpu<'a> {
         let y_tile_address = BGMAP_BEGIN_ADDRESS + (y_bgmap as u16 / 8 * 32);
 
         //TODO: Implement tileset changing via LCDC
-
         for x in 0..=255_u8 {
             let x_bgmap = x.wrapping_add(self.scroll_x);
 
@@ -270,10 +319,10 @@ impl<'a> Gpu<'a> {
             if tile_begin_address == TILESET_FIRST_BEGIN_ADDRESS {
                 tile_begin_address += tile as u16 * 16;
             } else {
-                if tile < 127 {
-                    tile_begin_address += tile as u16 * 16;
+                if tile < 128 {
+                    tile_begin_address = tile_begin_address.wrapping_add(tile as u16 * 16);
                 } else {
-                    tile_begin_address -= (256 - tile as u16) * 16;
+                    tile_begin_address = tile_begin_address.wrapping_sub((256 - tile as u16) * 16);
                 }
             }
 

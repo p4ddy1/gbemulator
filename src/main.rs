@@ -20,7 +20,7 @@ mod memory;
 mod util;
 
 fn main() {
-    let mut cartridge = match Mbc1Cartridge::new_from_file("testrom/cpu_instrs/cpu_instrs.gb") {
+    let mut cartridge = match Mbc1Cartridge::new_from_file("testrom/marioland.gb") {
         Ok(c) => c,
         Err(e) => {
             panic!(e);
@@ -44,6 +44,7 @@ fn main() {
             SCREEN_HEIGHT as u32 * SCALE as u32,
         )
         .position_centered()
+        .opengl()
         .build()
         .unwrap();
 
@@ -202,6 +203,6 @@ fn main() {
 
         cpu.mmu.gpu.screen.present();
 
-        //thread::sleep(Duration::from_nanos(FRAME_TIME_NS));
+        thread::sleep(Duration::from_nanos(FRAME_TIME_NS));
     }
 }

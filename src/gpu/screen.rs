@@ -5,7 +5,7 @@ use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
 pub trait Screen {
-    fn render(&mut self, screen_buffer: &[Pixel; 65536]);
+    fn render(&mut self, screen_buffer: &[Pixel; 68000]);
     fn present(&mut self);
 }
 
@@ -42,7 +42,7 @@ impl<'a> SdlScreen<'a> {
 }
 
 impl<'a> Screen for SdlScreen<'a> {
-    fn render(&mut self, screen_buffer: &[Pixel; 65536]) {
+    fn render(&mut self, screen_buffer: &[Pixel; 68000]) {
         self.canvas.clear();
 
         for y in 0..SCREEN_HEIGHT {
@@ -73,9 +73,11 @@ impl<'a> Screen for SdlScreen<'a> {
                 Some(Rect::new(0, 0, self.width as u32, self.height as u32)),
             )
             .unwrap();
+
+        self.canvas.present();
     }
 
     fn present(&mut self) {
-        self.canvas.present();
+        //self.canvas.present();
     }
 }
