@@ -1,6 +1,6 @@
 use crate::gpu::screen::Screen;
 use crate::gpu::{Pixel, SCREEN_MAX_PIXELS};
-use crate::util::binary::{is_bit_set, set_bit_in_byte, reset_bit_in_byte};
+use crate::util::binary::{is_bit_set, reset_bit_in_byte, set_bit_in_byte};
 use sdl2::render::BlendMode::Mod;
 
 const VRAM_ADDRESS: u16 = 0x8000;
@@ -98,7 +98,7 @@ impl<'a> Gpu<'a> {
         self.stat = reset_bit_in_byte(self.stat, 2);
         if self.lyc == self.current_scanline {
             self.stat = set_bit_in_byte(self.stat, 2);
-            if is_bit_set(self.stat, 6) {
+            if is_bit_set(&self.stat, 6) {
                 self.lcd_stat = true;
             } //TODO: Is this correct?
         }
@@ -114,17 +114,17 @@ impl<'a> Gpu<'a> {
     fn fire_stat_interrupt(&mut self) {
         match self.mode {
             Mode::Oam => {
-                if is_bit_set(self.stat, 5) {
+                if is_bit_set(&self.stat, 5) {
                     self.lcd_stat = true;
                 }
-            },
+            }
             Mode::Vram => {
-                if is_bit_set(self.stat, 3) {
+                if is_bit_set(&self.stat, 3) {
                     self.lcd_stat = true;
                 }
-            },
+            }
             Mode::Vblank => {
-                if is_bit_set(self.stat, 4) {
+                if is_bit_set(&self.stat, 4) {
                     self.lcd_stat = true;
                 }
             }
@@ -203,20 +203,19 @@ impl<'a> Gpu<'a> {
 
     fn render_scanline_to_screen(&mut self) {
         //Bit 7 = LCD Enable. Disabled? Render nothing
-        if !is_bit_set(self.lcdc, 7) {
+        if !is_bit_set(&self.lcdc, 7) {
             return;
         }
 
         self.render_background_line();
 
-        if is_bit_set(self.lcdc, 1) {
+        if is_bit_set(&self.lcdc, 1) {
             self.render_sprite_line();
         }
     }
 
     fn render_sprite_line(&mut self) {
         //TODO: Scroll_X is missing, y flip, palette
-
         let current_line = self.current_scanline.wrapping_add(self.scroll_y);
 
         for sprite_count in 0..40 {
@@ -250,39 +249,14 @@ impl<'a> Gpu<'a> {
                     let offset =
                         self.current_scanline as usize + 256 * (sprite_x as usize + x as usize);
 
-                    //Handle sprite priority
-                    if is_bit_set(sprite_options, 7) {
-                        match self.screen_buffer[offset] {
-                            Pixel::On => {}
-                            _ => continue,
-                        };
+                    if (self.background_has_priority_over_pixel(&sprite_options, offset)) {
+                        continue;
                     }
 
-                    //X Flip
-                    let pixel_index = if is_bit_set(sprite_options, 5) {
-                        x
-                    } else {
-                        7 - x
-                    };
+                    let pixel_index = flip_x(&sprite_options, x);
 
-                    //Checking each bit of the tile and setting the according pixel on the framebuffer
-                    let pixel_is_active = is_bit_set(tile_data, pixel_index);
-                    let pixel_color_bit = is_bit_set(tile_color_data, pixel_index);
-                    let mut pixel: Option<Pixel> = None;
-
-                    //Color 0 on sprites is transparent
-
-                    if pixel_is_active && pixel_color_bit {
-                        pixel = Some(self.bg_pal[3]);
-                    }
-
-                    if pixel_is_active && !pixel_color_bit {
-                        pixel = Some(self.bg_pal[1]);
-                    }
-
-                    if !pixel_is_active && pixel_color_bit {
-                        pixel = Some(self.bg_pal[2]);
-                    }
+                    let pixel =
+                        get_pixel(&self.bg_pal, tile_data, tile_color_data, pixel_index, true);
 
                     match pixel {
                         Some(value) => self.screen_buffer[offset] = value,
@@ -293,8 +267,31 @@ impl<'a> Gpu<'a> {
         }
     }
 
+    fn background_has_priority_over_pixel(&self, sprite_options: &u8, offset: usize) -> bool {
+        if !is_bit_set(&sprite_options, 7) {
+            return false;
+        }
+
+        match self.screen_buffer[offset] {
+            Pixel::On => return false,
+            _ => {}
+        };
+
+        true
+    }
+
+    fn calculate_tile_address(&self, tile_number: u8) -> u16 {
+        //Use first tileset, tile_number interpreted as unsigned
+        if is_bit_set(&self.lcdc, 4) {
+            return TILESET_FIRST_BEGIN_ADDRESS + tile_number as u16 * 16;
+        }
+        //Use second tileset, tile_number interpreted as signed
+        TILESET_SECOND_BEGIN_ADDRESS.wrapping_add(((tile_number as i8) as u16).wrapping_mul(16))
+    }
+
     fn render_background_line(&mut self) {
         let y_bgmap = self.current_scanline.wrapping_add(self.scroll_y) as u16;
+        let y_tile_address_offset = y_bgmap % 8 * 2;
 
         //Each tile consists of 8 lines so we stay at one tile for 8 scanlines
         let y_tile_address = BGMAP_BEGIN_ADDRESS + (y_bgmap as u16 / 8 * 32);
@@ -307,54 +304,61 @@ impl<'a> Gpu<'a> {
 
             let tile = self.read_vram(tile_address);
 
-            //TODO: Optimize this
-            let mut tile_begin_address = TILESET_FIRST_BEGIN_ADDRESS;
-
-            if !is_bit_set(self.lcdc, 4) {
-                tile_begin_address = TILESET_SECOND_BEGIN_ADDRESS;
-            }
-
-            //Get the begin address for the tile on the background. Each tile consists of 16 bytes
-            if tile_begin_address == TILESET_FIRST_BEGIN_ADDRESS {
-                tile_begin_address += tile as u16 * 16;
-            } else {
-                if tile < 128 {
-                    tile_begin_address = tile_begin_address.wrapping_add(tile as u16 * 16);
-                } else {
-                    tile_begin_address = tile_begin_address.wrapping_sub((256 - tile as u16) * 16);
-                }
-            }
+            let tile_begin_address = self.calculate_tile_address(tile);
 
             //Each tile consists of one byte at the y axes
-            let tile_data_address = tile_begin_address + (y_bgmap % 8 * 2);
+            let tile_data_address = tile_begin_address + y_tile_address_offset;
             //The color data sits one byte after the pixel data
-            let tile_color_data_address = tile_begin_address + (y_bgmap % 8 * 2) + 1;
+            let tile_color_data_address = tile_data_address + 1;
 
             let tile_data = self.read_vram(tile_data_address);
             let tile_color_data = self.read_vram(tile_color_data_address);
 
-            //Checking each bit of the tile and setting the according pixel on the framebuffer
-            let pixel_is_active = is_bit_set(tile_data, 7 - x_bgmap % 8);
-            let pixel_color_bit = is_bit_set(tile_color_data, 7 - x_bgmap % 8);
-            let mut pixel = Pixel::Off;
+            let pixel_index = 7 - x_bgmap % 8;
 
-            if pixel_is_active && pixel_color_bit {
-                pixel = self.bg_pal[3];
-            }
+            let pixel =
+                get_pixel(&self.bg_pal, tile_data, tile_color_data, pixel_index, false).unwrap();
 
-            if pixel_is_active && !pixel_color_bit {
-                pixel = self.bg_pal[1];
-            }
-
-            if !pixel_is_active && !pixel_color_bit {
-                pixel = self.bg_pal[0];
-            }
-
-            if !pixel_is_active && pixel_color_bit {
-                pixel = self.bg_pal[2];
-            }
-
-            self.screen_buffer[self.current_scanline as usize + 256 * x as usize] = pixel
+            self.screen_buffer[self.current_scanline as usize + 256 * x as usize] = pixel;
         }
     }
+}
+
+fn get_pixel(
+    palette: &[Pixel],
+    tile_data: u8,
+    tile_color_data: u8,
+    pixel: u8,
+    sprite: bool,
+) -> Option<Pixel> {
+    let pixel_is_active = is_bit_set(&tile_data, pixel);
+    let pixel_color_bit = is_bit_set(&tile_color_data, pixel);
+
+    if pixel_is_active && pixel_color_bit {
+        return Some(palette[3]);
+    }
+
+    if pixel_is_active && !pixel_color_bit {
+        return Some(palette[1]);
+    }
+
+    //On sprite rendering this is transparent
+    if !pixel_is_active && !pixel_color_bit && !sprite {
+        return Some(palette[0]);
+    }
+
+    if !pixel_is_active && pixel_color_bit {
+        return Some(palette[2]);
+    }
+
+    None
+}
+
+/// Checks the sprite options if x flip is needed and performs it
+fn flip_x(sprite_options: &u8, x: u8) -> u8 {
+    if is_bit_set(&sprite_options, 5) {
+        return x;
+    }
+
+    7 - x
 }

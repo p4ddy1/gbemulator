@@ -42,7 +42,7 @@ pub struct Mmu<'a> {
     is_booted: bool,
     pub joypad: &'a mut Joypad,
     divider: u8,
-    pub dma: bool //TODO: Remove
+    pub dma: bool, //TODO: Remove
 }
 
 impl<'a> Mmu<'a> {
@@ -67,7 +67,7 @@ impl<'a> Mmu<'a> {
             is_booted: true,
             joypad: joypad,
             divider: 0,
-            dma: false
+            dma: false,
         }
     }
 

@@ -59,12 +59,12 @@ impl Joypad {
 
     pub fn select_keys_by_write(&mut self, value: u8) {
         //Bit 4 = Direction keys selected
-        if !is_bit_set(value, 4) {
+        if !is_bit_set(&value, 4) {
             self.current_key_type = KeyType::DirectionKeys;
         }
 
         //Bit 5 = Button keys
-        if !is_bit_set(value, 5) {
+        if !is_bit_set(&value, 5) {
             self.current_key_type = KeyType::ButtonKeys;
         }
     }

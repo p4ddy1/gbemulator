@@ -6,7 +6,7 @@ pub fn rotate_left(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
     let mut result = value << 1;
 
     //If bit 7 is set, set bit 0 because bit 7 will get shifted out
-    if is_bit_set(value, 7) {
+    if is_bit_set(&value, 7) {
         result |= 0x01;
     }
 
@@ -17,7 +17,7 @@ pub fn rotate_left(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
     }
 
     //Set carry flag if bit 7 is set in initial value because it will be shifted out so carry occurs
-    if is_bit_set(value, 7) {
+    if is_bit_set(&value, 7) {
         cpu.registers.set_flag(Flag::C);
     }
 
@@ -40,7 +40,7 @@ pub fn rotate_left_through_carry(cpu: &mut Cpu, value: u8, check_for_zero: bool)
     }
 
     //Set carry flag if bit 7 is set in initial value because it will be shifted out so carry occurs
-    if is_bit_set(value, 7) {
+    if is_bit_set(&value, 7) {
         cpu.registers.set_flag(Flag::C);
     }
 
@@ -51,7 +51,7 @@ pub fn rotate_right(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
     let mut result = value >> 1;
 
     //If bit 0 is set, set bit 7 because bit 0 will get shifted out
-    if is_bit_set(value, 0) {
+    if is_bit_set(&value, 0) {
         result |= 0x80;
     }
 
@@ -62,7 +62,7 @@ pub fn rotate_right(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
     }
 
     //Set carry flag if bit 0 is set in initial value because it will be shifted out so carry occurs
-    if is_bit_set(value, 0) {
+    if is_bit_set(&value, 0) {
         cpu.registers.set_flag(Flag::C);
     }
 
@@ -83,7 +83,7 @@ pub fn rotate_right_through_carry(cpu: &mut Cpu, value: u8, check_for_zero: bool
     }
 
     //Set carry flag if bit 0 is set in initial value because it will be shifted out so carry occurs
-    if is_bit_set(value, 0) {
+    if is_bit_set(&value, 0) {
         cpu.registers.set_flag(Flag::C);
     }
 
@@ -94,7 +94,7 @@ pub fn check_bit(cpu: &mut Cpu, byte: u8, index: u8) {
     cpu.registers.clear_flag(Flag::Z);
     cpu.registers.clear_flag(Flag::N);
 
-    if !is_bit_set(byte, index) {
+    if !is_bit_set(&byte, index) {
         cpu.registers.set_flag(Flag::Z)
     }
 
@@ -120,7 +120,7 @@ pub fn sla(cpu: &mut Cpu, value: u8) -> u8 {
         cpu.registers.set_flag(Flag::Z);
     }
 
-    if is_bit_set(value, 7) {
+    if is_bit_set(&value, 7) {
         cpu.registers.set_flag(Flag::C);
     }
 
@@ -131,7 +131,7 @@ pub fn sra(cpu: &mut Cpu, value: u8) -> u8 {
     cpu.registers.clear_all_flags();
     let mut result = value >> 1;
 
-    if is_bit_set(value, 7) {
+    if is_bit_set(&value, 7) {
         result |= 0x80;
     }
 
@@ -139,7 +139,7 @@ pub fn sra(cpu: &mut Cpu, value: u8) -> u8 {
         cpu.registers.set_flag(Flag::Z);
     }
 
-    if is_bit_set(value, 0) {
+    if is_bit_set(&value, 0) {
         cpu.registers.set_flag(Flag::C);
     }
 
@@ -154,7 +154,7 @@ pub fn srl(cpu: &mut Cpu, value: u8) -> u8 {
         cpu.registers.set_flag(Flag::Z);
     }
 
-    if is_bit_set(value, 0) {
+    if is_bit_set(&value, 0) {
         cpu.registers.set_flag(Flag::C);
     }
 

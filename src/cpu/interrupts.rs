@@ -38,11 +38,11 @@ pub fn handle_interrupts(cpu: &mut Cpu) -> Option<u8> {
 }
 
 fn vblank_interrupt_occured(enabled_interrupts: u8, fired_interrupts: u8) -> bool {
-    is_bit_set(enabled_interrupts, 0) && is_bit_set(fired_interrupts, 0)
+    is_bit_set(&enabled_interrupts, 0) && is_bit_set(&fired_interrupts, 0)
 }
 
 fn lcd_stat_interrupt_occured(enabled_interrupts: u8, fired_interrupts: u8) -> bool {
-    is_bit_set(enabled_interrupts, 0) && is_bit_set(fired_interrupts, 1)
+    is_bit_set(&enabled_interrupts, 0) && is_bit_set(&fired_interrupts, 1)
 }
 
 fn handle_vblank(cpu: &mut Cpu) {

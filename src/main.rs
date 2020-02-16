@@ -20,7 +20,7 @@ mod memory;
 mod util;
 
 fn main() {
-    let mut cartridge = match Mbc1Cartridge::new_from_file("testrom/marioland.gb") {
+    let mut cartridge = match Mbc1Cartridge::new_from_file("testrom/drmario.gb") {
         Ok(c) => c,
         Err(e) => {
             panic!(e);
@@ -64,7 +64,7 @@ fn main() {
     let mut joypad = Joypad::new();
 
     let mut gpu = Gpu::new(&mut screen);
-    let mut mmu = Mmu::new(&mut cartridge, &mut gpu, None, &mut joypad);
+    let mut mmu = Mmu::new(&mut cartridge, &mut gpu, Some(&bios), &mut joypad);
     let mut cpu = Cpu::new(&mut mmu);
 
     const CPU_CLOCK_HZ: usize = 4194304;

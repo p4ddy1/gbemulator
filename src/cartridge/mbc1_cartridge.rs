@@ -3,7 +3,7 @@ use std::fs;
 
 enum Mode {
     RomBankingMode,
-    RamBankingMode
+    RamBankingMode,
 }
 
 pub struct Mbc1Cartridge {
@@ -11,7 +11,7 @@ pub struct Mbc1Cartridge {
     ram: [u8; EXT_RAM_SIZE * 3],
     selected_bank: u8,
     selected_ram_bank: u8,
-    selected_mode: Mode
+    selected_mode: Mode,
 }
 
 impl Mbc1Cartridge {
@@ -28,7 +28,7 @@ impl Mbc1Cartridge {
             ram: [0; EXT_RAM_SIZE * 3],
             selected_bank: 1,
             selected_ram_bank: 0,
-            selected_mode: Mode::RomBankingMode
+            selected_mode: Mode::RomBankingMode,
         })
     }
 }
@@ -59,14 +59,12 @@ impl Cartridge for Mbc1Cartridge {
                 self.selected_bank = value;
             }
             //Address range for RAM bank number
-            0x4000..=0x5FFF => {
-                match self.selected_mode {
-                    Mode::RamBankingMode => {
-                        self.selected_ram_bank = value;
-                    },
-                    Mode::RomBankingMode => {
-                        self.selected_bank = self.selected_bank & 0xC0 | (value << 5);
-                    }
+            0x4000..=0x5FFF => match self.selected_mode {
+                Mode::RamBankingMode => {
+                    self.selected_ram_bank = value;
+                }
+                Mode::RomBankingMode => {
+                    self.selected_bank = self.selected_bank & 0xC0 | (value << 5);
                 }
             },
             //Select Mode

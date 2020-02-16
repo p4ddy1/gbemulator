@@ -6,7 +6,7 @@ pub fn word_to_bytes(word: u16) -> (u8, u8) {
     ((word >> 8) as u8, word as u8)
 }
 
-pub fn is_bit_set(byte: u8, index: u8) -> bool {
+pub fn is_bit_set(byte: &u8, index: u8) -> bool {
     (1 << index) & byte > 0
 }
 
