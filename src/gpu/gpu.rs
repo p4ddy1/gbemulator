@@ -112,7 +112,6 @@ impl<'a> Gpu<'a> {
     }
 
     fn fire_stat_interrupt(&mut self) {
-        //TODO: Is this correct?
         match self.mode {
             Mode::Oam => {
                 if is_bit_set(self.stat, 5) {
@@ -171,8 +170,8 @@ impl<'a> Gpu<'a> {
             }
             Mode::Vram => {
                 if self.clock >= CYCLES_VRAM {
-                    self.set_mode(Mode::Hblank);
                     self.render_scanline_to_screen();
+                    self.set_mode(Mode::Hblank);
                     self.clock = 0;
                 }
             }
@@ -180,7 +179,7 @@ impl<'a> Gpu<'a> {
                 if self.clock >= CYCLES_HBLANK {
                     self.clock = 0;
                     self.current_scanline += 1;
-                    if self.current_scanline >= SCANLINES_DISPLAY {
+                    if self.current_scanline > SCANLINES_DISPLAY {
                         self.set_mode(Mode::Vblank);
                         self.screen.render(&self.screen_buffer);
                         self.v_blank = true; //TODO: Remove! only for testing
@@ -301,7 +300,7 @@ impl<'a> Gpu<'a> {
         let y_tile_address = BGMAP_BEGIN_ADDRESS + (y_bgmap as u16 / 8 * 32);
 
         //TODO: Implement tileset changing via LCDC
-        for x in 0..=255_u8 {
+        for x in 0..=160_u8 {
             let x_bgmap = x.wrapping_add(self.scroll_x);
 
             let tile_address = y_tile_address + (x_bgmap as u16 / 8);

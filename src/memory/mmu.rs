@@ -64,7 +64,7 @@ impl<'a> Mmu<'a> {
             io: [0; IO_SIZE],
             interrupts_enabled: 0,
             interrupt_flags: 0,
-            is_booted: false,
+            is_booted: true,
             joypad: joypad,
             divider: 0,
             dma: false

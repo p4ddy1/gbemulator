@@ -64,7 +64,7 @@ fn main() {
     let mut joypad = Joypad::new();
 
     let mut gpu = Gpu::new(&mut screen);
-    let mut mmu = Mmu::new(&mut cartridge, &mut gpu, Some(&bios), &mut joypad);
+    let mut mmu = Mmu::new(&mut cartridge, &mut gpu, None, &mut joypad);
     let mut cpu = Cpu::new(&mut mmu);
 
     const CPU_CLOCK_HZ: usize = 4194304;
