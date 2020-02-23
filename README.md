@@ -30,3 +30,4 @@ I'm developing this just for fun and educational purposes. Come back a little la
 
 ![Tetris](https://cloud.lpnw.de/apps/files_sharing/publicpreview/jcm8QLoHETHRFBa?x=1920&y=632&a=true)
 ![DrMario](https://cloud.lpnw.de/apps/files_sharing/publicpreview/MHNYnr2pPDrneGc?x=1920&y=632&a=true)
+![CpuTest](https://cloud.lpnw.de/apps/files_sharing/publicpreview/kMBXmz8F9aWfTQo?x=1920&y=604&a=true)
