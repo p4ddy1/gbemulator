@@ -3,7 +3,7 @@ use crate::cpu::instructions;
 use crate::cpu::instructions::ExecutionType;
 use crate::cpu::interrupts::handle_interrupts;
 use crate::cpu::registers::Registers;
-use crate::memory::mmu_old::{Mmu, Opcode, INTERRUPT_FLAGS_ADDRESS};
+use crate::memory::mmu::{Mmu, Opcode};
 
 pub struct Cpu {
     pub registers: Registers,
@@ -24,18 +24,6 @@ impl Cpu {
     }
 
     pub fn step(&mut self, mmu: &mut Mmu) -> u8 {
-        //TODO: Remove! Only for testing
-        if mmu.gpu.v_blank {
-            mmu.gpu.v_blank = false;
-            mmu.write(INTERRUPT_FLAGS_ADDRESS, 0x01);
-        }
-
-        //TODO: Remove! Only for testing
-        if mmu.gpu.lcd_stat {
-            mmu.gpu.lcd_stat = false;
-            mmu.write(INTERRUPT_FLAGS_ADDRESS, 0x02);
-        }
-
         let op_code = mmu.read_opcode(self.registers.pc);
 
         let instruction = match instructions::get_instruction_by_op_code(&op_code) {
@@ -56,7 +44,7 @@ impl Cpu {
             }
         };
 
-        /*   match op_code {
+        /*  match op_code {
             Opcode::Regular(value) => {
                 println!("PC: 0x{:X} 0x{:X}: {}",self.registers.pc, value, instruction.description);
             },
@@ -90,11 +78,11 @@ impl Cpu {
             None => {}
         }
 
-        if mmu.dma {
-            clock_cycles += 160;
-            mmu.dma = false;
-        }
-
+        /* if mmu.dma {
+                    clock_cycles += 160;
+                    mmu.dma = false;
+                }
+        */
         self.clock.cycle(clock_cycles as usize);
         clock_cycles
     }

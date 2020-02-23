@@ -1,29 +1,33 @@
 use lib_gbemulation::cartridge::mbc1_cartridge::Mbc1Cartridge;
-use lib_gbemulation::cartridge::small_cartridge::SmallCartridge;
 use lib_gbemulation::cpu::cpu::Cpu;
+use lib_gbemulation::emulation::Emulation;
 use lib_gbemulation::gpu::gpu::Gpu;
 use lib_gbemulation::gpu::screen::SdlScreen;
 use lib_gbemulation::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use lib_gbemulation::io::joypad::{Joypad, Key};
-use lib_gbemulation::memory::mmu_old::Mmu;
+use lib_gbemulation::memory::mmu::Mmu;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
-use std::thread;
+use sdl2::EventPump;
 use std::time::Duration;
+use std::{env, process};
 
 fn main() {
-    let mut cartridge = match Mbc1Cartridge::new_from_file("testrom/marioland.gb") {
-        Ok(c) => c,
-        Err(e) => {
-            panic!(e);
-        }
-    };
+    let args: Vec<String> = env::args().collect();
 
-    let bios = match SmallCartridge::new_from_file("testrom/bios.gb") {
+    if args.len() < 2 {
+        println!("Usage: gbemulator rom.gb");
+        process::exit(1);
+    }
+
+    let rom_filename = String::from(&args[1]);
+
+    let mut cartridge = match Mbc1Cartridge::new_from_file(rom_filename) {
         Ok(c) => c,
         Err(e) => {
-            panic!(e);
+            println!("Error: {}", e);
+            process::exit(1);
         }
     };
 
@@ -43,7 +47,7 @@ fn main() {
 
     let canvas = window.into_canvas().build().unwrap();
     let texture_creator = canvas.texture_creator();
-    let mut texture = texture_creator
+    let texture = texture_creator
         .create_texture_streaming(PixelFormatEnum::RGB24, 160, 144)
         .unwrap();
     let mut screen = SdlScreen::new(
@@ -57,149 +61,119 @@ fn main() {
     let mut joypad = Joypad::new();
 
     let mut gpu = Gpu::new(&mut screen);
-    let mut mmu = Mmu::new(&mut cartridge, &mut gpu, Some(&bios), &mut joypad);
+    let mut mmu = Mmu::new(&mut cartridge);
     let mut cpu = Cpu::new();
+    let mut emulation = Emulation::new();
 
-    const CPU_CLOCK_HZ: usize = 4194304;
-    const FPS: usize = 60;
-    const CLOCK_CYCLES_PER_FRAME: usize = CPU_CLOCK_HZ / FPS;
-    const FRAME_TIME_NS: u64 = 1000000000 / FPS as u64;
+    loop {
+        handle_sdl_events(&mut event_pump, &mut joypad);
+        emulation.cycle(&mut cpu, &mut gpu, &mut mmu, &mut joypad);
+    }
+}
 
-    const DIV_DIVIDER: usize = 256;
-
-    let mut clock_cycles_passed_frame = 0;
-    let mut clock_cycles_passed_timer = 0;
-
-    'mainloop: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::KeyDown {
-                    keycode: Some(Keycode::Right),
-                    ..
-                } => {
-                    mmu.joypad.push_key(Key::Right);
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Right),
-                    ..
-                } => {
-                    mmu.joypad.release_key(Key::Right);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Left),
-                    ..
-                } => {
-                    mmu.joypad.push_key(Key::Left);
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Left),
-                    ..
-                } => {
-                    mmu.joypad.release_key(Key::Left);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Down),
-                    ..
-                } => {
-                    mmu.joypad.push_key(Key::Down);
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Down),
-                    ..
-                } => {
-                    mmu.joypad.release_key(Key::Down);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Up),
-                    ..
-                } => {
-                    mmu.joypad.push_key(Key::Up);
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Up),
-                    ..
-                } => {
-                    mmu.joypad.release_key(Key::Up);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Space),
-                    ..
-                } => {
-                    mmu.joypad.push_key(Key::Start);
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Space),
-                    ..
-                } => {
-                    mmu.joypad.release_key(Key::Start);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::B),
-                    ..
-                } => {
-                    mmu.joypad.push_key(Key::B);
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::B),
-                    ..
-                } => {
-                    mmu.joypad.release_key(Key::B);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => {
-                    mmu.joypad.push_key(Key::A);
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => {
-                    mmu.joypad.release_key(Key::A);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::E),
-                    ..
-                } => {
-                    mmu.joypad.push_key(Key::Select);
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::E),
-                    ..
-                } => {
-                    mmu.joypad.release_key(Key::Select);
-                }
-                Event::Quit { .. } => {
-                    break 'mainloop;
-                }
-                _ => {}
+fn handle_sdl_events(event_pump: &mut EventPump, joypad: &mut Joypad) {
+    for event in event_pump.poll_iter() {
+        match event {
+            Event::KeyDown {
+                keycode: Some(Keycode::Right),
+                ..
+            } => {
+                joypad.push_key(Key::Right);
             }
+            Event::KeyUp {
+                keycode: Some(Keycode::Right),
+                ..
+            } => {
+                joypad.release_key(Key::Right);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Left),
+                ..
+            } => {
+                joypad.push_key(Key::Left);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Left),
+                ..
+            } => {
+                joypad.release_key(Key::Left);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Down),
+                ..
+            } => {
+                joypad.push_key(Key::Down);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Down),
+                ..
+            } => {
+                joypad.release_key(Key::Down);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Up),
+                ..
+            } => {
+                joypad.push_key(Key::Up);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Up),
+                ..
+            } => {
+                joypad.release_key(Key::Up);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Space),
+                ..
+            } => {
+                joypad.push_key(Key::Start);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Space),
+                ..
+            } => {
+                joypad.release_key(Key::Start);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::B),
+                ..
+            } => {
+                joypad.push_key(Key::B);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::B),
+                ..
+            } => {
+                joypad.release_key(Key::B);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::A),
+                ..
+            } => {
+                joypad.push_key(Key::A);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::A),
+                ..
+            } => {
+                joypad.release_key(Key::A);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::E),
+                ..
+            } => {
+                joypad.push_key(Key::Select);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::E),
+                ..
+            } => {
+                joypad.release_key(Key::Select);
+            }
+            Event::Quit { .. } => {
+                process::exit(0);
+            }
+            _ => {}
         }
-
-        //TODO: Check if this is the correct way
-        while clock_cycles_passed_frame < CLOCK_CYCLES_PER_FRAME {
-
-
-            let last_cycle = cpu.step(&mut mmu);
-            mmu.gpu.step(last_cycle);
-
-            clock_cycles_passed_frame += last_cycle as usize;
-
-            clock_cycles_passed_timer += clock_cycles_passed_frame;
-
-            if clock_cycles_passed_timer % DIV_DIVIDER == 0 {
-                mmu.increase_divider();
-            }
-
-            if clock_cycles_passed_timer > CPU_CLOCK_HZ {
-                clock_cycles_passed_timer = 0;
-            }
-        }
-
-        clock_cycles_passed_frame = 0;
-
-        mmu.gpu.screen.present();
-
-        thread::sleep(Duration::from_nanos(FRAME_TIME_NS));
     }
 }

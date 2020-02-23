@@ -1,5 +1,5 @@
 use crate::cpu::cpu::Cpu;
-use crate::memory::mmu_old::{Mmu, Opcode};
+use crate::memory::mmu::{Mmu, Opcode};
 use crate::util::binary::bytes_to_word;
 
 pub mod cb_instructions;

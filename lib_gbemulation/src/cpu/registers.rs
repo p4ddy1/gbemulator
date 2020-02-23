@@ -30,7 +30,7 @@ impl Registers {
             h: 0x01,
             l: 0x4D,
             f: 0xB0,
-            pc: 0,
+            pc: 0x100,
             sp: 0,
         }
     }

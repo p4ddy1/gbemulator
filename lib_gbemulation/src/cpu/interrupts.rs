@@ -1,6 +1,6 @@
 use crate::cpu::cpu::Cpu;
-use crate::memory::mmu_old;
-use crate::memory::mmu_old::Mmu;
+use crate::memory::interrupts;
+use crate::memory::mmu::Mmu;
 use crate::util::binary::is_bit_set;
 
 //TODO: This is hacky and only for prototyping, refactor this before implementing more interrupts
@@ -10,14 +10,14 @@ pub fn handle_interrupts(cpu: &mut Cpu, mmu: &mut Mmu) -> Option<u8> {
         return None;
     }
 
-    let enabled_interrupts = mmu.read(mmu_old::INTERRUPT_ENABLE_ADDRESS);
-    let fired_interrupts = mmu.read(mmu_old::INTERRUPT_FLAGS_ADDRESS);
+    let enabled_interrupts = mmu.read(interrupts::INTERRUPT_ENABLE_ADDRESS);
+    let fired_interrupts = mmu.read(interrupts::INTERRUPT_FLAGS_ADDRESS);
 
     if vblank_interrupt_occured(enabled_interrupts, fired_interrupts) {
         handle_vblank(cpu, mmu);
         //Reset fired interrupts
         mmu.write(
-            mmu_old::INTERRUPT_FLAGS_ADDRESS,
+            interrupts::INTERRUPT_FLAGS_ADDRESS,
             fired_interrupts & (255 - 0x01),
         );
         //12 clock cycles
@@ -28,7 +28,7 @@ pub fn handle_interrupts(cpu: &mut Cpu, mmu: &mut Mmu) -> Option<u8> {
         handle_lcd_stat(cpu, mmu);
         //Reset fired interrupts
         mmu.write(
-            mmu_old::INTERRUPT_FLAGS_ADDRESS,
+            interrupts::INTERRUPT_FLAGS_ADDRESS,
             fired_interrupts & (255 - 0x02),
         );
         //12 clock cycles

@@ -1,5 +1,5 @@
-use crate::gpu::{Pixel, SCALE, SCREEN_HEIGHT, SCREEN_MAX_PIXELS, SCREEN_WIDTH};
-use sdl2::pixels::Color;
+use crate::gpu::{Pixel, SCREEN_HEIGHT, SCREEN_WIDTH};
+
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;

@@ -2,7 +2,7 @@ use crate::cpu::cpu::Cpu;
 use crate::cpu::instructions::functions::rotate_left;
 use crate::cpu::instructions::{functions, read_hl_addr, ExecutionType, Instruction};
 use crate::cpu::registers::Flag;
-use crate::memory::mmu_old::{Mmu, Opcode};
+use crate::memory::mmu::{Mmu, Opcode};
 use crate::util::binary;
 use crate::util::binary::{bytes_to_word, word_to_bytes};
 
@@ -44,7 +44,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "INC BC",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let mut value = binary::bytes_to_word(cpu.registers.b, cpu.registers.c);
                 value = value.wrapping_add(1);
                 let (byte1, byte2) = binary::word_to_bytes(value);
@@ -58,7 +58,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "INC B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = functions::increment_byte(cpu, cpu.registers.b);
                 ExecutionType::None
             },
@@ -68,7 +68,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DEC B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = functions::decrement_byte(cpu, cpu.registers.b);
                 ExecutionType::None
             },
@@ -88,7 +88,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "RLCA",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = rotate_left(cpu, cpu.registers.a, false);
                 ExecutionType::None
             },
@@ -112,7 +112,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "ADD HL,BC",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
                 let b_c = bytes_to_word(cpu.registers.b, cpu.registers.c);
 
@@ -140,7 +140,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "DEC BC",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let mut value = bytes_to_word(cpu.registers.b, cpu.registers.c);
                 value = value.wrapping_sub(1);
                 let (byte1, byte2) = word_to_bytes(value);
@@ -154,7 +154,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "INC C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = functions::increment_byte(cpu, cpu.registers.c);
                 ExecutionType::None
             },
@@ -164,7 +164,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DEC C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = functions::decrement_byte(cpu, cpu.registers.c);
                 ExecutionType::None
             },
@@ -184,7 +184,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "RRCA",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::rotate_right(cpu, cpu.registers.a, false);
                 ExecutionType::None
             },
@@ -194,7 +194,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "STOP 0",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |_cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 //TODO: Implement stop
                 ExecutionType::None
             },
@@ -228,7 +228,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "INC DE",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let mut value = binary::bytes_to_word(cpu.registers.d, cpu.registers.e);
                 value = value.wrapping_add(1);
                 let (byte1, byte2) = binary::word_to_bytes(value);
@@ -242,7 +242,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "INC D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = functions::increment_byte(cpu, cpu.registers.d);
                 ExecutionType::None
             },
@@ -252,7 +252,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DEC D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = functions::decrement_byte(cpu, cpu.registers.d);
                 ExecutionType::None
             },
@@ -272,7 +272,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "RLA",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::rotate_left_through_carry(cpu, cpu.registers.a, false);
                 ExecutionType::None
             },
@@ -292,7 +292,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "ADD HL,DE",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
                 let d_e = bytes_to_word(cpu.registers.d, cpu.registers.e);
 
@@ -320,7 +320,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "DEC DE",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let mut value = bytes_to_word(cpu.registers.d, cpu.registers.e);
                 value = value.wrapping_sub(1);
                 let (byte1, byte2) = word_to_bytes(value);
@@ -334,7 +334,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "INC E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = functions::increment_byte(cpu, cpu.registers.e);
                 ExecutionType::None
             },
@@ -344,7 +344,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DEC E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = functions::decrement_byte(cpu, cpu.registers.e);
                 ExecutionType::None
             },
@@ -364,7 +364,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "RRA",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a =
                     functions::rotate_right_through_carry(cpu, cpu.registers.a, false);
                 ExecutionType::None
@@ -413,7 +413,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "INC HL",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let mut value = binary::bytes_to_word(cpu.registers.h, cpu.registers.l);
                 value = value.wrapping_add(1);
                 let (byte1, byte2) = binary::word_to_bytes(value);
@@ -427,7 +427,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "INC H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = functions::increment_byte(cpu, cpu.registers.h);
                 ExecutionType::None
             },
@@ -437,7 +437,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DEC H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = functions::decrement_byte(cpu, cpu.registers.h);
                 ExecutionType::None
             },
@@ -457,7 +457,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DAA",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.clear_flag(Flag::Z);
 
                 //Flag N will be set after a substraction
@@ -508,7 +508,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "ADD HL,HL",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
 
                 let result = functions::add_words(cpu, h_l, h_l);
@@ -540,7 +540,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "DEC HL",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let mut value = bytes_to_word(cpu.registers.h, cpu.registers.l);
                 value = value.wrapping_sub(1);
                 let (byte1, byte2) = word_to_bytes(value);
@@ -554,7 +554,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "INC L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = functions::increment_byte(cpu, cpu.registers.l);
                 ExecutionType::None
             },
@@ -564,7 +564,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DEC L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = functions::decrement_byte(cpu, cpu.registers.l);
                 ExecutionType::None
             },
@@ -584,7 +584,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CPL",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = cpu.registers.a ^ 0xFF;
                 cpu.registers.set_flag(Flag::N);
                 cpu.registers.set_flag(Flag::H);
@@ -636,7 +636,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "INC SP",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.sp = cpu.registers.sp.wrapping_add(1);
                 ExecutionType::None
             },
@@ -681,7 +681,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SCF",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.set_flag(Flag::C);
                 cpu.registers.clear_flag(Flag::N);
                 cpu.registers.clear_flag(Flag::H);
@@ -705,7 +705,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "ADD HL,SP",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
 
                 let result = functions::add_words(cpu, h_l, cpu.registers.sp);
@@ -737,7 +737,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "DEC SP",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.sp = cpu.registers.sp.wrapping_sub(1);
                 ExecutionType::None
             },
@@ -747,7 +747,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "INC A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::increment_byte(cpu, cpu.registers.a);
                 ExecutionType::None
             },
@@ -757,7 +757,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DEC A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::decrement_byte(cpu, cpu.registers.a);
                 ExecutionType::None
             },
@@ -777,7 +777,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CCF",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 if cpu.registers.check_flag(Flag::C) {
                     cpu.registers.clear_flag(Flag::C);
                 } else {
@@ -794,7 +794,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD B,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = cpu.registers.b;
                 ExecutionType::None
             },
@@ -804,7 +804,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD B,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = cpu.registers.c;
                 ExecutionType::None
             },
@@ -814,7 +814,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD B,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = cpu.registers.d;
                 ExecutionType::None
             },
@@ -824,7 +824,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD B,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = cpu.registers.e;
                 ExecutionType::None
             },
@@ -834,7 +834,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD B,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = cpu.registers.h;
                 ExecutionType::None
             },
@@ -844,7 +844,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD B,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = cpu.registers.l;
                 ExecutionType::None
             },
@@ -865,7 +865,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD B,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.b = cpu.registers.a;
                 ExecutionType::None
             },
@@ -875,7 +875,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD C,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = cpu.registers.b;
                 ExecutionType::None
             },
@@ -885,7 +885,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD C,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = cpu.registers.c;
                 ExecutionType::None
             },
@@ -895,7 +895,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD C,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = cpu.registers.d;
                 ExecutionType::None
             },
@@ -905,7 +905,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD C,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = cpu.registers.e;
                 ExecutionType::None
             },
@@ -915,7 +915,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD C,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = cpu.registers.h;
                 ExecutionType::None
             },
@@ -925,7 +925,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD C,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = cpu.registers.l;
                 ExecutionType::None
             },
@@ -945,7 +945,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LC C,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.c = cpu.registers.a;
                 ExecutionType::None
             },
@@ -955,7 +955,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD D,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = cpu.registers.b;
                 ExecutionType::None
             },
@@ -965,7 +965,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD D,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = cpu.registers.c;
                 ExecutionType::None
             },
@@ -975,7 +975,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD D,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = cpu.registers.d;
                 ExecutionType::None
             },
@@ -985,7 +985,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD D,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = cpu.registers.e;
                 ExecutionType::None
             },
@@ -995,7 +995,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD D,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = cpu.registers.h;
                 ExecutionType::None
             },
@@ -1005,7 +1005,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD D,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = cpu.registers.l;
                 ExecutionType::None
             },
@@ -1025,7 +1025,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD D,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.d = cpu.registers.a;
                 ExecutionType::None
             },
@@ -1035,7 +1035,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD E,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = cpu.registers.b;
                 ExecutionType::None
             },
@@ -1045,7 +1045,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD E,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = cpu.registers.c;
                 ExecutionType::None
             },
@@ -1055,7 +1055,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD E,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = cpu.registers.d;
                 ExecutionType::None
             },
@@ -1065,7 +1065,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD E,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = cpu.registers.e;
                 ExecutionType::None
             },
@@ -1075,7 +1075,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD E,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = cpu.registers.h;
                 ExecutionType::None
             },
@@ -1085,7 +1085,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD E,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = cpu.registers.l;
                 ExecutionType::None
             },
@@ -1105,7 +1105,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD E,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.e = cpu.registers.a;
                 ExecutionType::None
             },
@@ -1115,7 +1115,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD H,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = cpu.registers.b;
                 ExecutionType::None
             },
@@ -1125,7 +1125,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD H,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = cpu.registers.c;
                 ExecutionType::None
             },
@@ -1135,7 +1135,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD H,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = cpu.registers.d;
                 ExecutionType::None
             },
@@ -1145,7 +1145,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD H,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = cpu.registers.e;
                 ExecutionType::None
             },
@@ -1155,7 +1155,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD H,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = cpu.registers.h;
                 ExecutionType::None
             },
@@ -1165,7 +1165,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD H,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = cpu.registers.l;
                 ExecutionType::None
             },
@@ -1185,7 +1185,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD H,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.h = cpu.registers.a;
                 ExecutionType::None
             },
@@ -1195,7 +1195,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD L,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = cpu.registers.b;
                 ExecutionType::None
             },
@@ -1205,7 +1205,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD L,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = cpu.registers.c;
                 ExecutionType::None
             },
@@ -1215,7 +1215,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD L,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = cpu.registers.d;
                 ExecutionType::None
             },
@@ -1225,7 +1225,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD L,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = cpu.registers.e;
                 ExecutionType::None
             },
@@ -1235,7 +1235,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD L,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = cpu.registers.h;
                 ExecutionType::None
             },
@@ -1245,7 +1245,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD L,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = cpu.registers.l;
                 ExecutionType::None
             },
@@ -1265,7 +1265,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD L,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.l = cpu.registers.a;
                 ExecutionType::None
             },
@@ -1353,7 +1353,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "HALT",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |_cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 //TODO: Implement halt
                 ExecutionType::None
             },
@@ -1376,7 +1376,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD A,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = cpu.registers.b;
                 ExecutionType::None
             },
@@ -1386,7 +1386,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD A,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = cpu.registers.c;
                 ExecutionType::None
             },
@@ -1396,7 +1396,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD A,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = cpu.registers.d;
                 ExecutionType::None
             },
@@ -1406,7 +1406,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD A,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = cpu.registers.e;
                 ExecutionType::None
             },
@@ -1416,7 +1416,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD A,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = cpu.registers.h;
                 ExecutionType::None
             },
@@ -1426,7 +1426,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD A,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = cpu.registers.l;
                 ExecutionType::None
             },
@@ -1446,7 +1446,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "LD A,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = cpu.registers.a;
                 ExecutionType::None
             },
@@ -1456,7 +1456,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADD A,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
             },
@@ -1466,7 +1466,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADD A,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.c);
                 ExecutionType::None
             },
@@ -1476,7 +1476,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADD A,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.d);
                 ExecutionType::None
             },
@@ -1486,7 +1486,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADD A,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.e);
                 ExecutionType::None
             },
@@ -1496,7 +1496,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADD A,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
             },
@@ -1506,7 +1506,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADD A,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.l);
                 ExecutionType::None
             },
@@ -1527,7 +1527,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADD A,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes(cpu, cpu.registers.a, cpu.registers.a);
                 ExecutionType::None
             },
@@ -1537,7 +1537,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADC A,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes_carry(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
             },
@@ -1547,7 +1547,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADC A,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes_carry(cpu, cpu.registers.a, cpu.registers.c);
                 ExecutionType::None
             },
@@ -1557,7 +1557,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADC A,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes_carry(cpu, cpu.registers.a, cpu.registers.d);
                 ExecutionType::None
             },
@@ -1567,7 +1567,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADC A,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes_carry(cpu, cpu.registers.a, cpu.registers.e);
                 ExecutionType::None
             },
@@ -1577,7 +1577,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADC A,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes_carry(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
             },
@@ -1587,7 +1587,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADC A,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes_carry(cpu, cpu.registers.a, cpu.registers.l);
                 ExecutionType::None
             },
@@ -1608,7 +1608,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "ADC A,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::add_bytes_carry(cpu, cpu.registers.a, cpu.registers.a);
                 ExecutionType::None
             },
@@ -1618,7 +1618,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SUB B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::substract_byte(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
             },
@@ -1628,7 +1628,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SUB C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::substract_byte(cpu, cpu.registers.a, cpu.registers.c);
                 ExecutionType::None
             },
@@ -1638,7 +1638,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SUB D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::substract_byte(cpu, cpu.registers.a, cpu.registers.d);
                 ExecutionType::None
             },
@@ -1648,7 +1648,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SUB E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::substract_byte(cpu, cpu.registers.a, cpu.registers.e);
                 ExecutionType::None
             },
@@ -1658,7 +1658,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SUB H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::substract_byte(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
             },
@@ -1668,7 +1668,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SUB L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::substract_byte(cpu, cpu.registers.a, cpu.registers.l);
                 ExecutionType::None
             },
@@ -1689,7 +1689,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SUB A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::substract_byte(cpu, cpu.registers.a, cpu.registers.a);
                 ExecutionType::None
             },
@@ -1699,7 +1699,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SBC A,B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a =
                     functions::substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
@@ -1710,7 +1710,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SBC A,C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a =
                     functions::substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.c);
                 ExecutionType::None
@@ -1721,7 +1721,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SBC A,D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a =
                     functions::substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.d);
                 ExecutionType::None
@@ -1732,7 +1732,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SBC A,E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a =
                     functions::substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.e);
                 ExecutionType::None
@@ -1743,7 +1743,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SBC A,H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a =
                     functions::substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
@@ -1754,7 +1754,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SBC A,L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a =
                     functions::substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.l);
                 ExecutionType::None
@@ -1776,7 +1776,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "SBC A,A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a =
                     functions::substract_bytes_carry(cpu, cpu.registers.a, cpu.registers.a);
                 ExecutionType::None
@@ -1787,7 +1787,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "AND B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::and_bytes(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
             },
@@ -1797,7 +1797,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "AND C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::and_bytes(cpu, cpu.registers.a, cpu.registers.c);
                 ExecutionType::None
             },
@@ -1807,7 +1807,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "AND D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::and_bytes(cpu, cpu.registers.a, cpu.registers.d);
                 ExecutionType::None
             },
@@ -1817,7 +1817,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "AND E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::and_bytes(cpu, cpu.registers.a, cpu.registers.e);
                 ExecutionType::None
             },
@@ -1827,7 +1827,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "AND H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::and_bytes(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
             },
@@ -1837,7 +1837,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "AND L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::and_bytes(cpu, cpu.registers.a, cpu.registers.l);
                 ExecutionType::None
             },
@@ -1858,7 +1858,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "AND A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::and_bytes(cpu, cpu.registers.a, cpu.registers.a);
                 ExecutionType::None
             },
@@ -1868,7 +1868,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "XOR B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::xor_bytes(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
             },
@@ -1878,7 +1878,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "XOR C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::xor_bytes(cpu, cpu.registers.a, cpu.registers.c);
                 ExecutionType::None
             },
@@ -1888,7 +1888,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "XOR D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::xor_bytes(cpu, cpu.registers.a, cpu.registers.d);
                 ExecutionType::None
             },
@@ -1898,7 +1898,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "XOR E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::xor_bytes(cpu, cpu.registers.a, cpu.registers.e);
                 ExecutionType::None
             },
@@ -1908,7 +1908,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "XOR H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::xor_bytes(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
             },
@@ -1918,7 +1918,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "XOR L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::xor_bytes(cpu, cpu.registers.a, cpu.registers.l);
                 ExecutionType::None
             },
@@ -1939,7 +1939,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "XOR A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::xor_bytes(cpu, cpu.registers.a, cpu.registers.a);
                 ExecutionType::None
             },
@@ -1949,7 +1949,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "OR B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::or_bytes(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
             },
@@ -1959,7 +1959,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "OR C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::or_bytes(cpu, cpu.registers.a, cpu.registers.c);
                 ExecutionType::None
             },
@@ -1969,7 +1969,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "OR D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::or_bytes(cpu, cpu.registers.a, cpu.registers.d);
                 ExecutionType::None
             },
@@ -1979,7 +1979,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "OR E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::or_bytes(cpu, cpu.registers.a, cpu.registers.e);
                 ExecutionType::None
             },
@@ -1989,7 +1989,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "OR H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::or_bytes(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
             },
@@ -1999,7 +1999,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "OR L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::or_bytes(cpu, cpu.registers.a, cpu.registers.l);
                 ExecutionType::None
             },
@@ -2019,7 +2019,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "OR A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.a = functions::or_bytes(cpu, cpu.registers.a, cpu.registers.a);
                 ExecutionType::None
             },
@@ -2029,7 +2029,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CP B",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 functions::compare_bytes(cpu, cpu.registers.a, cpu.registers.b);
                 ExecutionType::None
             },
@@ -2039,7 +2039,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CP C",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 functions::compare_bytes(cpu, cpu.registers.a, cpu.registers.c);
                 ExecutionType::None
             },
@@ -2049,7 +2049,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CP D",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 functions::compare_bytes(cpu, cpu.registers.a, cpu.registers.d);
                 ExecutionType::None
             },
@@ -2059,7 +2059,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CP E",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 functions::compare_bytes(cpu, cpu.registers.a, cpu.registers.e);
                 ExecutionType::None
             },
@@ -2069,7 +2069,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CP H",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 functions::compare_bytes(cpu, cpu.registers.a, cpu.registers.h);
                 ExecutionType::None
             },
@@ -2079,7 +2079,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CP L",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 functions::compare_bytes(cpu, cpu.registers.a, cpu.registers.l);
                 ExecutionType::None
             },
@@ -2099,7 +2099,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "CP A",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 functions::compare_bytes(cpu, cpu.registers.a, cpu.registers.a);
                 ExecutionType::None
             },
@@ -2567,7 +2567,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "JP (HL)",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.registers.pc = bytes_to_word(cpu.registers.h, cpu.registers.l);
                 ExecutionType::Jumped
             },
@@ -2648,7 +2648,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "DI",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.interrupt_master_enabled = false;
                 ExecutionType::None
             },
@@ -2708,7 +2708,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "LD SP,HL",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 let h_l = bytes_to_word(cpu.registers.h, cpu.registers.l);
                 cpu.registers.sp = h_l;
 
@@ -2734,7 +2734,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 12,
             clock_cycles_condition: None,
             description: "EI",
-            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
                 cpu.interrupt_master_enabled = true;
                 ExecutionType::None
             },

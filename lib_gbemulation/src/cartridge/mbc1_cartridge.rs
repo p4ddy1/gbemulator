@@ -15,7 +15,7 @@ pub struct Mbc1Cartridge {
 }
 
 impl Mbc1Cartridge {
-    pub fn new_from_file(filename: &str) -> Result<Mbc1Cartridge, &str> {
+    pub fn new_from_file(filename: String) -> Result<Mbc1Cartridge, &'static str> {
         let data = match fs::read(filename) {
             Ok(data) => data,
             Err(_) => {

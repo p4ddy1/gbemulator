@@ -34,7 +34,7 @@ impl Cartridge for SmallCartridge {
         self.data[address as usize]
     }
 
-    fn write(&mut self, address: u16, value: u8) {
+    fn write(&mut self, _address: u16, _value: u8) {
         //Write does nothing, because no MBC is here
         return;
     }
