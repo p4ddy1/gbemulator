@@ -1,5 +1,6 @@
 use crate::cpu::cpu::Cpu;
 use crate::cpu::registers::Flag;
+use crate::memory::mmu_old::Mmu;
 use crate::util::binary::{bytes_to_word, is_bit_set};
 
 pub fn rotate_left(cpu: &mut Cpu, value: u8, check_for_zero: bool) -> u8 {
@@ -161,24 +162,24 @@ pub fn srl(cpu: &mut Cpu, value: u8) -> u8 {
     result
 }
 
-pub fn jump_on_flag_reset(cpu: &mut Cpu, flag: Flag) -> bool {
+pub fn jump_on_flag_reset(cpu: &mut Cpu, mmu: &Mmu, flag: Flag) -> bool {
     if !cpu.registers.check_flag(flag) {
-        jump_to_attribute_address(cpu);
+        jump_to_attribute_address(cpu, mmu);
         return true;
     }
     false
 }
 
-pub fn jump_on_flag(cpu: &mut Cpu, flag: Flag) -> bool {
+pub fn jump_on_flag(cpu: &mut Cpu, mmu: &Mmu, flag: Flag) -> bool {
     if cpu.registers.check_flag(flag) {
-        jump_to_attribute_address(cpu);
+        jump_to_attribute_address(cpu, mmu);
         return true;
     }
     false
 }
 
-pub fn jump_to_attribute_address(cpu: &mut Cpu) {
-    let destination = cpu.get_attribute_for_op_code(0);
+pub fn jump_to_attribute_address(cpu: &mut Cpu, mmu: &Mmu) {
+    let destination = get_argument(cpu, mmu, 0);
 
     if destination < 127 {
         cpu.registers.pc += destination as u16;
@@ -418,18 +419,19 @@ pub fn and_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
     result
 }
 
-pub fn rst(cpu: &mut Cpu, param: u8) {
+pub fn rst(cpu: &mut Cpu, mmu: &mut Mmu, param: u8) {
     cpu.registers.sp -= 2;
-    cpu.mmu.write_word(cpu.registers.sp, cpu.registers.pc + 1);
+    mmu.write_word(cpu.registers.sp, cpu.registers.pc + 1);
     cpu.registers.pc = bytes_to_word(0x00, param);
 }
 
-pub fn call(cpu: &mut Cpu) {
+pub fn call(cpu: &mut Cpu, mmu: &mut Mmu) {
     //Put address of next instruction onto stack and jump to aa
     cpu.registers.sp -= 2;
-    cpu.mmu.write_word(cpu.registers.sp, cpu.registers.pc + 3);
-    cpu.registers.pc = bytes_to_word(
-        cpu.get_attribute_for_op_code(1),
-        cpu.get_attribute_for_op_code(0),
-    );
+    mmu.write_word(cpu.registers.sp, cpu.registers.pc + 3);
+    cpu.registers.pc = bytes_to_word(get_argument(cpu, mmu, 1), get_argument(cpu, mmu, 0));
+}
+
+pub fn get_argument(cpu: &Cpu, mmu: &Mmu, index: u16) -> u8 {
+    mmu.read(cpu.registers.pc + (index + 1))
 }

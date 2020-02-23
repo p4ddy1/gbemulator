@@ -1,5 +1,5 @@
 use crate::cpu::cpu::Cpu;
-use crate::memory::mmu::Opcode;
+use crate::memory::mmu_old::{Mmu, Opcode};
 use crate::util::binary::bytes_to_word;
 
 pub mod cb_instructions;
@@ -18,7 +18,7 @@ pub struct Instruction {
     pub clock_cycles: u8,
     pub clock_cycles_condition: Option<u8>,
     pub description: &'static str,
-    pub handler: fn(cpu: &mut Cpu, op_code: &Opcode) -> ExecutionType,
+    pub handler: fn(cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode) -> ExecutionType,
 }
 
 pub fn get_instruction_by_op_code(op_code: &Opcode) -> Option<&Instruction> {
@@ -28,12 +28,10 @@ pub fn get_instruction_by_op_code(op_code: &Opcode) -> Option<&Instruction> {
     }
 }
 
-fn read_hl_addr(cpu: &Cpu) -> u8 {
-    cpu.mmu
-        .read(bytes_to_word(cpu.registers.h, cpu.registers.l))
+fn read_hl_addr(cpu: &Cpu, mmu: &Mmu) -> u8 {
+    mmu.read(bytes_to_word(cpu.registers.h, cpu.registers.l))
 }
 
-fn write_hl_addr(value: u8, cpu: &mut Cpu) {
-    cpu.mmu
-        .write(bytes_to_word(cpu.registers.h, cpu.registers.l), value);
+fn write_hl_addr(value: u8, cpu: &mut Cpu, mmu: &mut Mmu) {
+    mmu.write(bytes_to_word(cpu.registers.h, cpu.registers.l), value);
 }

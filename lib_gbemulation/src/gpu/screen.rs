@@ -73,11 +73,9 @@ impl<'a> Screen for SdlScreen<'a> {
                 Some(Rect::new(0, 0, self.width as u32, self.height as u32)),
             )
             .unwrap();
-
-        self.canvas.present();
     }
 
     fn present(&mut self) {
-        //self.canvas.present();
+        self.canvas.present();
     }
 }

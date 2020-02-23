@@ -3,43 +3,40 @@ use crate::cpu::instructions;
 use crate::cpu::instructions::ExecutionType;
 use crate::cpu::interrupts::handle_interrupts;
 use crate::cpu::registers::Registers;
-use crate::memory::mmu::{Opcode, INTERRUPT_FLAGS_ADDRESS};
-use crate::Mmu;
+use crate::memory::mmu_old::{Mmu, Opcode, INTERRUPT_FLAGS_ADDRESS};
 
-pub struct Cpu<'a> {
+pub struct Cpu {
     pub registers: Registers,
     clock: Clock,
-    pub mmu: &'a mut Mmu<'a>,
     pub interrupt_master_enabled: bool,
 }
 
-impl<'a> Cpu<'a> {
-    pub fn new(mmu: &'a mut Mmu<'a>) -> Cpu<'a> {
+impl Cpu {
+    pub fn new() -> Cpu {
         let registers = Registers::new();
         let clock = Clock::new();
 
         Cpu {
             registers,
             clock,
-            mmu,
             interrupt_master_enabled: false,
         }
     }
 
-    pub fn execute_program_counter(&mut self) -> u8 {
+    pub fn step(&mut self, mmu: &mut Mmu) -> u8 {
         //TODO: Remove! Only for testing
-        if self.mmu.gpu.v_blank {
-            self.mmu.gpu.v_blank = false;
-            self.mmu.write(INTERRUPT_FLAGS_ADDRESS, 0x01);
+        if mmu.gpu.v_blank {
+            mmu.gpu.v_blank = false;
+            mmu.write(INTERRUPT_FLAGS_ADDRESS, 0x01);
         }
 
         //TODO: Remove! Only for testing
-        if self.mmu.gpu.lcd_stat {
-            self.mmu.gpu.lcd_stat = false;
-            self.mmu.write(INTERRUPT_FLAGS_ADDRESS, 0x02);
+        if mmu.gpu.lcd_stat {
+            mmu.gpu.lcd_stat = false;
+            mmu.write(INTERRUPT_FLAGS_ADDRESS, 0x02);
         }
 
-        let op_code = self.mmu.read_opcode(self.registers.pc);
+        let op_code = mmu.read_opcode(self.registers.pc);
 
         let instruction = match instructions::get_instruction_by_op_code(&op_code) {
             Some(instruction) => instruction,
@@ -72,7 +69,7 @@ impl<'a> Cpu<'a> {
             println!("0x{:X}", self.registers.a);
         }*/
 
-        let result = (instruction.handler)(self, &op_code);
+        let result = (instruction.handler)(self, mmu, &op_code);
 
         //Use the correct value if action of conditional instruction is taken or not
         let mut clock_cycles = match result {
@@ -88,22 +85,17 @@ impl<'a> Cpu<'a> {
             }
         };
 
-        match handle_interrupts(self) {
+        match handle_interrupts(self, mmu) {
             Some(cycles) => clock_cycles += cycles,
             None => {}
         }
 
-        if self.mmu.dma {
+        if mmu.dma {
             clock_cycles += 160;
-            self.mmu.dma = false;
+            mmu.dma = false;
         }
 
         self.clock.cycle(clock_cycles as usize);
-        self.mmu.gpu.step(clock_cycles);
         clock_cycles
-    }
-
-    pub fn get_attribute_for_op_code(&self, index: u16) -> u8 {
-        self.mmu.read(self.registers.pc + (index + 1))
     }
 }

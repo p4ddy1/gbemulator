@@ -2,7 +2,7 @@ use crate::cpu::cpu::Cpu;
 use crate::cpu::instructions::{
     functions, read_hl_addr, write_hl_addr, ExecutionType, Instruction,
 };
-use crate::memory::mmu::Opcode;
+use crate::memory::mmu_old::{Mmu, Opcode};
 use crate::util::binary::{reset_bit_in_byte, set_bit_in_byte};
 
 //TODO: Fix descriptions
@@ -13,7 +13,7 @@ macro_rules! bit {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "BIT $bit,(B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 functions::check_bit(cpu, read_by_opcode(op_code, cpu), $bit);
                 ExecutionType::None
             },
@@ -28,8 +28,8 @@ macro_rules! bit_hl {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "BIT $bit,(HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                functions::check_bit(cpu, read_hl_addr(cpu), $bit);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                functions::check_bit(cpu, read_hl_addr(cpu, mmu), $bit);
                 ExecutionType::None
             },
         })
@@ -43,7 +43,7 @@ macro_rules! res {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "RES $bit,(B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let result = reset_bit_in_byte(read_by_opcode(op_code, cpu), $bit);
                 write_by_opcode(op_code, result, cpu);
                 ExecutionType::None
@@ -59,9 +59,9 @@ macro_rules! res_hl {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "RES $bit,(HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = reset_bit_in_byte(read_hl_addr(cpu), $bit);
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result = reset_bit_in_byte(read_hl_addr(cpu, mmu), $bit);
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         })
@@ -75,7 +75,7 @@ macro_rules! set {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "SET $bit,(B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let result = set_bit_in_byte(read_by_opcode(op_code, cpu), $bit);
                 write_by_opcode(op_code, result, cpu);
                 ExecutionType::None
@@ -91,9 +91,9 @@ macro_rules! set_hl {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "SET $bit,(HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = set_bit_in_byte(read_hl_addr(cpu), $bit);
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result = set_bit_in_byte(read_hl_addr(cpu, mmu), $bit);
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         })
@@ -107,7 +107,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "RLC (B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::rotate_left(cpu, value, true);
                 write_by_opcode(op_code, result, cpu);
@@ -119,9 +119,9 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "RLC (HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_left(cpu, read_hl_addr(cpu), true);
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result = functions::rotate_left(cpu, read_hl_addr(cpu, mmu), true);
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         }),
@@ -130,7 +130,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "RRC (B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::rotate_right(cpu, value, true);
                 write_by_opcode(op_code, result, cpu);
@@ -142,9 +142,9 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "RRC (HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_right(cpu, read_hl_addr(cpu), true);
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result = functions::rotate_right(cpu, read_hl_addr(cpu, mmu), true);
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         }),
@@ -153,7 +153,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "RL (B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::rotate_left_through_carry(cpu, value, true);
                 write_by_opcode(op_code, result, cpu);
@@ -165,9 +165,10 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "RL (HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_left_through_carry(cpu, read_hl_addr(cpu), true);
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result =
+                    functions::rotate_left_through_carry(cpu, read_hl_addr(cpu, mmu), true);
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         }),
@@ -176,7 +177,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "RR (B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::rotate_right_through_carry(cpu, value, true);
                 write_by_opcode(op_code, result, cpu);
@@ -188,9 +189,10 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "RR (HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::rotate_right_through_carry(cpu, read_hl_addr(cpu), true);
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result =
+                    functions::rotate_right_through_carry(cpu, read_hl_addr(cpu, mmu), true);
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         }),
@@ -199,7 +201,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "SLA (B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::sla(cpu, value);
                 write_by_opcode(op_code, result, cpu);
@@ -211,9 +213,9 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "SLA (HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::sla(cpu, read_hl_addr(cpu));
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result = functions::sla(cpu, read_hl_addr(cpu, mmu));
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         }),
@@ -222,7 +224,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "SRA (B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::sra(cpu, value);
                 write_by_opcode(op_code, result, cpu);
@@ -234,9 +236,9 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "SRA (HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::sra(cpu, read_hl_addr(cpu));
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result = functions::sra(cpu, read_hl_addr(cpu, mmu));
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         }),
@@ -245,7 +247,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "SWAP (B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::swap_nibbles(cpu, value);
                 write_by_opcode(op_code, result, cpu);
@@ -257,9 +259,9 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "SWAP (HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::swap_nibbles(cpu, read_hl_addr(cpu));
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result = functions::swap_nibbles(cpu, read_hl_addr(cpu, mmu));
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         }),
@@ -268,7 +270,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "SRL (B..A)",
-            handler: |cpu: &mut Cpu, op_code: &Opcode| {
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, op_code: &Opcode| {
                 let value = read_by_opcode(op_code, cpu);
                 let result = functions::srl(cpu, value);
                 write_by_opcode(op_code, result, cpu);
@@ -280,9 +282,9 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 16,
             clock_cycles_condition: None,
             description: "SRL (HL)",
-            handler: |cpu: &mut Cpu, _: &Opcode| {
-                let result = functions::srl(cpu, read_hl_addr(cpu));
-                write_hl_addr(result, cpu);
+            handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
+                let result = functions::srl(cpu, read_hl_addr(cpu, mmu));
+                write_hl_addr(result, cpu, mmu);
                 ExecutionType::None
             },
         }),

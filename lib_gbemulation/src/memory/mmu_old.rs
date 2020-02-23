@@ -1,7 +1,7 @@
 use crate::cartridge::Cartridge;
+use crate::gpu::gpu::Gpu;
 use crate::io::joypad::Joypad;
 use crate::util::binary;
-use crate::Gpu;
 
 const EXT_RAM_SIZE: usize = 8192;
 const W_RAM_SIZE: usize = 8192;
