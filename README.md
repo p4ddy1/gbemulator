@@ -10,24 +10,27 @@ I'm developing this just for fun and educational purposes. Come back a little la
 
 ### Working
 * Implemented almost all instructions (HALT and STOP still missing)
+* blargg's cpu_instr and instr_timing tests pass
 * Basic Background rendering is working
 * Basic Sprite rendering is working
 * Tetris works
 * Super Mario Land is playable
+* Timer
 
-### Still missing
+### Todo
 * Switching the background set
 * Window
-* Timers
 * Some Sprite options
 * MBC
-* Interrupts (currently only V-Blank and LCD works)
+* Interrupts (Serial and Joypad)
 * Sound
 * GUI
 * Probably a lot i forgot
+* Fix a few graphic glitches
 
 ## Screenshots
 
+![CpuTest](https://cloud.lpnw.de/apps/files_sharing/publicpreview/KbyxSCrXL9kKr8i?x=1920&y=632&a=true)
+![TimingTest](https://cloud.lpnw.de/apps/files_sharing/publicpreview/CE8dENP7JacDSN5?x=1920&y=632&a=true)
 ![Tetris](https://cloud.lpnw.de/apps/files_sharing/publicpreview/jcm8QLoHETHRFBa?x=1920&y=632&a=true)
 ![DrMario](https://cloud.lpnw.de/apps/files_sharing/publicpreview/MHNYnr2pPDrneGc?x=1920&y=632&a=true)
-![CpuTest](https://cloud.lpnw.de/apps/files_sharing/publicpreview/kMBXmz8F9aWfTQo?x=1920&y=604&a=true)
