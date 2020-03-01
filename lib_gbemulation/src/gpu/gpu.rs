@@ -122,7 +122,7 @@ impl<'a> Gpu<'a> {
                 if self.clock >= CYCLES_HBLANK {
                     self.clock = 0;
                     mmu.io_bus.current_scanline += 1;
-                    if mmu.io_bus.current_scanline >= SCANLINES_DISPLAY {
+                    if mmu.io_bus.current_scanline > SCANLINES_DISPLAY {
                         self.set_mode(mmu, Mode::Vblank);
                         self.screen.render(&self.screen_buffer);
                         mmu.interrupts.fire_interrupt(&Interrupt::Vblank);
