@@ -40,8 +40,8 @@ impl Cartridge for Mbc1Cartridge {
             0x0..=0x3FFF => self.data[address as usize],
             //Bank 01-7F
             0x4000..=0x7FFF => {
-                let offset = 0x4000 * self.selected_bank as u16;
-                self.data[(address as usize - 0x4000) + offset as usize]
+                let offset = 0x4000 * self.selected_bank as usize;
+                self.data[(address as usize - 0x4000) + offset]
             }
             _ => panic!("Address unkown: 0x{:X}", address),
         }

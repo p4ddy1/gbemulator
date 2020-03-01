@@ -2634,7 +2634,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             },
         }),
         0xF2 => Some(&Instruction {
-            length: 2,
+            length: 1,
             clock_cycles: 8,
             clock_cycles_condition: None,
             description: "LD A,(C)",
@@ -2731,7 +2731,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
         }),
         0xFB => Some(&Instruction {
             length: 1,
-            clock_cycles: 12,
+            clock_cycles: 4,
             clock_cycles_condition: None,
             description: "EI",
             handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {

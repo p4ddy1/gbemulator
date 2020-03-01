@@ -25,7 +25,7 @@ macro_rules! bit_hl {
     ($bit: expr) => {
         Some(&Instruction {
             length: 2,
-            clock_cycles: 16,
+            clock_cycles: 12,
             clock_cycles_condition: None,
             description: "BIT $bit,(HL)",
             handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {

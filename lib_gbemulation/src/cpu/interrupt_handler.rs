@@ -34,6 +34,5 @@ fn handle_interrupt(cpu: &mut Cpu, mmu: &mut Mmu, interrupt: &Interrupt, isr_add
     mmu.write_word(cpu.registers.sp, cpu.registers.pc);
     cpu.registers.pc = isr_address;
     mmu.interrupts.reset_interrupt(interrupt);
-    cpu.is_halted = false;
     true
 }
