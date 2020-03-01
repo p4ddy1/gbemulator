@@ -9,7 +9,7 @@ I'm developing this just for fun and educational purposes. Come back a little la
 ## Status
 
 ### Working
-* Implemented almost all instructions (HALT and STOP still missing)
+* Implemented almost all instructions (STOP still missing)
 * blargg's cpu_instr and instr_timing tests pass
 * Basic Background rendering is working
 * Basic Sprite rendering is working
