@@ -50,7 +50,7 @@ impl<'a> Gpu<'a> {
         if mmu.io_bus.lyc == mmu.io_bus.current_scanline {
             mmu.io_bus.stat = set_bit_in_byte(mmu.io_bus.stat, 2);
             if is_bit_set(&mmu.io_bus.stat, 6) {
-                mmu.interrupts.fire_interrupt(Interrupt::LcdStat);
+                mmu.interrupts.fire_interrupt(&Interrupt::LcdStat);
             } //TODO: Is this correct?
         }
     }
@@ -66,17 +66,17 @@ impl<'a> Gpu<'a> {
         match self.mode {
             Mode::Oam => {
                 if is_bit_set(&mmu.io_bus.stat, 5) {
-                    mmu.interrupts.fire_interrupt(Interrupt::LcdStat);
+                    mmu.interrupts.fire_interrupt(&Interrupt::LcdStat);
                 }
             }
             Mode::Vram => {
                 if is_bit_set(&mmu.io_bus.stat, 3) {
-                    mmu.interrupts.fire_interrupt(Interrupt::LcdStat);
+                    mmu.interrupts.fire_interrupt(&Interrupt::LcdStat);
                 }
             }
             Mode::Vblank => {
                 if is_bit_set(&mmu.io_bus.stat, 4) {
-                    mmu.interrupts.fire_interrupt(Interrupt::LcdStat);
+                    mmu.interrupts.fire_interrupt(&Interrupt::LcdStat);
                 }
             }
             _ => {}
@@ -125,7 +125,7 @@ impl<'a> Gpu<'a> {
                     if mmu.io_bus.current_scanline > SCANLINES_DISPLAY {
                         self.set_mode(mmu, Mode::Vblank);
                         self.screen.render(&self.screen_buffer);
-                        mmu.interrupts.fire_interrupt(Interrupt::Vblank);
+                        mmu.interrupts.fire_interrupt(&Interrupt::Vblank);
                     } else {
                         self.set_mode(mmu, Mode::Oam);
                     }

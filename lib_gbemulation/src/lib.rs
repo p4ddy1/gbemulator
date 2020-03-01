@@ -1,4 +1,5 @@
 pub mod cartridge;
+pub mod clock;
 pub mod cpu;
 pub mod emulation;
 pub mod gpu;

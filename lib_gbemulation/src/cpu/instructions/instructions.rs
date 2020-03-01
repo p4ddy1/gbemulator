@@ -1,4 +1,4 @@
-use crate::cpu::cpu::Cpu;
+use crate::cpu::cpu::{Cpu, InterruptAction};
 use crate::cpu::instructions::functions::rotate_left;
 use crate::cpu::instructions::{functions, read_hl_addr, ExecutionType, Instruction};
 use crate::cpu::registers::Flag;
@@ -1353,8 +1353,8 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles: 4,
             clock_cycles_condition: None,
             description: "HALT",
-            handler: |_cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
-                //TODO: Implement halt
+            handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
+                cpu.is_halted = true;
                 ExecutionType::None
             },
         }),
@@ -2419,7 +2419,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "RETI",
             handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
-                cpu.interrupt_master_enabled = true;
+                cpu.interrupt_action = InterruptAction::Enable;
                 cpu.registers.pc = mmu.read_word(cpu.registers.sp);
                 cpu.registers.sp += 2;
                 ExecutionType::Jumped
@@ -2649,7 +2649,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "DI",
             handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
-                cpu.interrupt_master_enabled = false;
+                cpu.interrupt_action = InterruptAction::Disable;
                 ExecutionType::None
             },
         }),
@@ -2735,7 +2735,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "EI",
             handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
-                cpu.interrupt_master_enabled = true;
+                cpu.interrupt_action = InterruptAction::Enable;
                 ExecutionType::None
             },
         }),

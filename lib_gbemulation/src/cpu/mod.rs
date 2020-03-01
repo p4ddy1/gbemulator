@@ -1,5 +1,4 @@
-mod clock;
 pub mod cpu;
 mod instructions;
-mod interrupts;
+mod interrupt_handler;
 mod registers;

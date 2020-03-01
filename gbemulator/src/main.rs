@@ -10,7 +10,6 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::EventPump;
-use std::time::Duration;
 use std::{env, process};
 
 fn main() {

@@ -15,7 +15,7 @@ pub const OAM_ADDRESS: u16 = 0xFE00;
 const W_RAM_SIZE: usize = 8192;
 const H_RAM_SIZE: usize = 127;
 const V_RAM_SIZE: usize = 8192;
-const OAM_SIZE: usize = 159;
+const OAM_SIZE: usize = 160;
 
 pub enum Opcode {
     Regular(u8),

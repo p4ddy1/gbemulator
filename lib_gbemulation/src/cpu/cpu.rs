@@ -1,25 +1,32 @@
-use crate::cpu::clock::Clock;
 use crate::cpu::instructions;
-use crate::cpu::instructions::ExecutionType;
-use crate::cpu::interrupts::handle_interrupts;
+use crate::cpu::instructions::{ExecutionType, Instruction};
+use crate::cpu::interrupt_handler::handle_interrupts;
 use crate::cpu::registers::Registers;
+use crate::memory::interrupts::Interrupt;
 use crate::memory::mmu::{Mmu, Opcode};
+
+pub enum InterruptAction {
+    None,
+    Enable,
+    Disable,
+}
 
 pub struct Cpu {
     pub registers: Registers,
-    clock: Clock,
-    pub interrupt_master_enabled: bool,
+    pub interrupt_action: InterruptAction,
+    interrupt_master_enabled: bool,
+    pub is_halted: bool,
 }
 
 impl Cpu {
     pub fn new() -> Cpu {
         let registers = Registers::new();
-        let clock = Clock::new();
 
         Cpu {
             registers,
-            clock,
+            interrupt_action: InterruptAction::None,
             interrupt_master_enabled: false,
+            is_halted: false,
         }
     }
 
@@ -44,23 +51,67 @@ impl Cpu {
             }
         };
 
+        let mut clock_cycles = 4;
+
         /*  match op_code {
             Opcode::Regular(value) => {
-                println!("PC: 0x{:X} 0x{:X}: {}",self.registers.pc, value, instruction.description);
-            },
+                println!(
+                    "PC: 0x{:X} 0x{:X}: {}",
+                    self.registers.pc, value, instruction.description
+                );
+            }
             Opcode::CB(value) => {
-                println!("PC: 0x{:X} CB 0x{:X}: {}",self.registers.pc, value, instruction.description);
+                println!(
+                    "PC: 0x{:X} CB 0x{:X}: {}",
+                    self.registers.pc, value, instruction.description
+                );
             }
         }*/
 
-        /*if self.registers.pc == 0xC007 {
-            println!("0x{:X}", self.registers.a);
-        }*/
+        if self.is_halted && any_interrupt_fired(mmu) {
+            self.is_halted = false;
+            if !self.interrupt_master_enabled {
+                //HALT Bug
+                self.registers.pc -= 1;
+            }
+        }
 
+        if !self.is_halted {
+            clock_cycles = self.execute_instruction(instruction, mmu, &op_code);
+        }
+
+        if self.interrupt_master_enabled {
+            match handle_interrupts(self, mmu) {
+                Some(cycles) => clock_cycles += cycles,
+                None => {}
+            }
+        }
+
+        match self.interrupt_action {
+            InterruptAction::Enable => {
+                self.interrupt_master_enabled = true;
+                self.interrupt_action = InterruptAction::None;
+            }
+            InterruptAction::Disable => {
+                self.interrupt_master_enabled = false;
+                self.interrupt_action = InterruptAction::None;
+            }
+            _ => {}
+        }
+
+        clock_cycles
+    }
+
+    fn execute_instruction(
+        &mut self,
+        instruction: &Instruction,
+        mmu: &mut Mmu,
+        op_code: &Opcode,
+    ) -> u8 {
         let result = (instruction.handler)(self, mmu, &op_code);
 
         //Use the correct value if action of conditional instruction is taken or not
-        let mut clock_cycles = match result {
+        match result {
             ExecutionType::ActionTaken => {
                 self.registers.pc += instruction.length;
                 instruction.clock_cycles_condition.unwrap()
@@ -71,19 +122,15 @@ impl Cpu {
                 self.registers.pc += instruction.length;
                 instruction.clock_cycles
             }
-        };
-
-        match handle_interrupts(self, mmu) {
-            Some(cycles) => clock_cycles += cycles,
-            None => {}
         }
-
-        /* if mmu.dma {
-                    clock_cycles += 160;
-                    mmu.dma = false;
-                }
-        */
-        self.clock.cycle(clock_cycles as usize);
-        clock_cycles
     }
+}
+
+pub fn any_interrupt_fired(mmu: &Mmu) -> bool {
+    mmu.interrupts.interrupt_fired(&Interrupt::Vblank)
+        || mmu.interrupts.interrupt_fired(&Interrupt::Vblank)
+        || mmu.interrupts.interrupt_fired(&Interrupt::LcdStat)
+        || mmu.interrupts.interrupt_fired(&Interrupt::Timer)
+        || mmu.interrupts.interrupt_fired(&Interrupt::Serial)
+        || mmu.interrupts.interrupt_fired(&Interrupt::Joypad)
 }

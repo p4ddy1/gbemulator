@@ -5,6 +5,9 @@ pub const IO_START_ADDRESS: u16 = 0xFF00;
 
 pub struct IoBus {
     pub divider: u8,
+    pub counter: u8,
+    pub modulo: u8,
+    pub timer_control: u8,
     pub lcdc: u8,
     pub stat: u8,
     pub scroll_y: u8,
@@ -21,6 +24,9 @@ impl IoBus {
     pub fn new() -> IoBus {
         IoBus {
             divider: 0,
+            counter: 0,
+            modulo: 0,
+            timer_control: 0,
             lcdc: 0,
             stat: 0x84,
             scroll_y: 0,
@@ -45,6 +51,9 @@ impl ReadWrite for IoBus {
         match address {
             0xFF00 => self.joypad,
             0xFF04 => self.divider,
+            0xFF05 => self.counter,
+            0xFF06 => self.modulo,
+            0xFF07 => self.timer_control,
             0xFF40 => self.lcdc,
             0xFF41 => self.stat,
             0xFF42 => self.scroll_y,
@@ -60,6 +69,9 @@ impl ReadWrite for IoBus {
         match address {
             0xFF00 => self.joypad_select = value,
             0xFF04 => self.divider = 0,
+            0xFF05 => self.counter = value,
+            0xFF06 => self.modulo = value,
+            0xFF07 => self.timer_control = value,
             0xFF40 => self.lcdc = value,
             0xFF41 => self.stat = value,
             0xFF42 => self.scroll_y = value,
