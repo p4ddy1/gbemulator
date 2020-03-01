@@ -1,8 +1,7 @@
 # GBemulator
 ![BuildStatus](https://api.travis-ci.org/p4ddy1/gbemulator.svg?branch=master)
 
-Gameboy Emulator written from scratch in Rust. This is currently nowhere near a fully functional emulator. 
-I'm developing this just for fun and educational purposes. Come back a little later ;)
+Gameboy Emulator written from scratch in Rust. Currently under heavy development.
 
 ![MarioLand](https://cloud.lpnw.de/apps/files_sharing/publicpreview/freAayx9sFQk7oy?x=1920&y=632&a=true)
 

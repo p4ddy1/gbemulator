@@ -14,7 +14,7 @@ pub enum InterruptAction {
 pub struct Cpu {
     pub registers: Registers,
     pub interrupt_action: InterruptAction,
-    interrupt_master_enabled: bool,
+    pub interrupt_master_enabled: bool,
     pub is_halted: bool,
 }
 
