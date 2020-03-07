@@ -17,7 +17,7 @@ pub struct IoBus {
     pub current_scanline: u8,
     joypad_select: u8,
     joypad: u8,
-    unmapped: [u8; 127],
+    unmapped: [u8; 128],
 }
 
 impl IoBus {
@@ -34,7 +34,7 @@ impl IoBus {
             bgpal: 0,
             lyc: 0,
             current_scanline: 0,
-            unmapped: [0; 127],
+            unmapped: [0; 128],
             joypad_select: 0xFF,
             joypad: 0xFF,
         }

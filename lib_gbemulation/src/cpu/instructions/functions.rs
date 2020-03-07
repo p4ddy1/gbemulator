@@ -181,11 +181,7 @@ pub fn jump_on_flag(cpu: &mut Cpu, mmu: &Mmu, flag: Flag) -> bool {
 pub fn jump_to_attribute_address(cpu: &mut Cpu, mmu: &Mmu) {
     let destination = get_argument(cpu, mmu, 0);
 
-    if destination < 127 {
-        cpu.registers.pc += destination as u16;
-    } else {
-        cpu.registers.pc -= 256 - destination as u16;
-    }
+    cpu.registers.pc = cpu.registers.pc.wrapping_add((destination as i8) as u16);
 }
 
 pub fn increment_byte(cpu: &mut Cpu, value: u8) -> u8 {

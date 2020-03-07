@@ -78,16 +78,15 @@ impl<'a> Mmu<'a> {
 
     pub fn read(&self, address: u16) -> u8 {
         match address {
-            W_RAM_ADDRESS..=0xDFFF | ECHO_RAM_ADDRESS..=0xFDFE => {
-                self.w_ram[(address - W_RAM_ADDRESS) as usize]
-            }
+            W_RAM_ADDRESS..=0xDFFF => self.w_ram[(address - W_RAM_ADDRESS) as usize],
+            ECHO_RAM_ADDRESS..=0xFDFF => self.w_ram[(address - ECHO_RAM_ADDRESS) as usize],
             0..=0x7FFF => self.cartridge.read(address),
             interrupts::INTERRUPT_FLAGS_ADDRESS => self.interrupts.interrupt_flags,
             VRAM_ADDRESS..=0x9FFF => self.read_vram(address),
-            OAM_ADDRESS..=0xFE9E => self.read_oam(address),
+            OAM_ADDRESS..=0xFE9F => self.read_oam(address),
             EXT_RAM_START_ADDRESS..=0xBFFF => self.cartridge.read_ram(address),
-            io_bus::IO_START_ADDRESS..=0xFF7E => self.io_bus.read(address),
-            H_RAM_ADDR..=0xFFFD => self.h_ram[(address - H_RAM_ADDR) as usize],
+            io_bus::IO_START_ADDRESS..=0xFF7F => self.io_bus.read(address),
+            H_RAM_ADDR..=0xFFFE => self.h_ram[(address - H_RAM_ADDR) as usize],
             interrupts::INTERRUPT_ENABLE_ADDRESS => self.interrupts.interrupts_enabled,
             _ => 0,
         }
@@ -101,10 +100,10 @@ impl<'a> Mmu<'a> {
             interrupts::INTERRUPT_FLAGS_ADDRESS => self.interrupts.interrupt_flags = value,
             interrupts::INTERRUPT_ENABLE_ADDRESS => self.interrupts.interrupts_enabled = value,
             0xFF46 => self.dma_transfer(value),
-            io_bus::IO_START_ADDRESS..=0xFF7E => self.io_bus.write(address, value),
-            H_RAM_ADDR..=0xFFFD => self.h_ram[(address - H_RAM_ADDR) as usize] = value,
+            io_bus::IO_START_ADDRESS..=0xFF7F => self.io_bus.write(address, value),
+            H_RAM_ADDR..=0xFFFE => self.h_ram[(address - H_RAM_ADDR) as usize] = value,
             VRAM_ADDRESS..=0x9FFF => self.v_ram[(address - VRAM_ADDRESS) as usize] = value,
-            OAM_ADDRESS..=0xFE9E => self.oam[(address - OAM_ADDRESS) as usize] = value,
+            OAM_ADDRESS..=0xFE9F => self.oam[(address - OAM_ADDRESS) as usize] = value,
             _ => {}
         }
     }

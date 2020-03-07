@@ -52,21 +52,22 @@ impl Cpu {
         };
 
         let mut clock_cycles = 4;
-
-        /*    match op_code {
-            Opcode::Regular(value) => {
-                println!(
-                    "PC: 0x{:X} 0x{:X}: {}",
-                    self.registers.pc, value, instruction.description
-                );
-            }
-            Opcode::CB(value) => {
-                println!(
-                    "PC: 0x{:X} CB 0x{:X}: {}",
-                    self.registers.pc, value, instruction.description
-                );
-            }
-        }*/
+        /*
+                    match op_code {
+                    Opcode::Regular(value) => {
+                        println!(
+                            "PC: 0x{:X} 0x{:X}: {}",
+                            self.registers.pc, value, instruction.description
+                        );
+                    }
+                    Opcode::CB(value) => {
+                        println!(
+                            "PC: 0x{:X} CB 0x{:X}: {}",
+                            self.registers.pc, value, instruction.description
+                        );
+                    }
+                }
+        */
 
         if self.is_halted && any_interrupt_fired(mmu) {
             self.is_halted = false;

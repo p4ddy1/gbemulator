@@ -158,30 +158,34 @@ impl<'a> Gpu<'a> {
     }
 
     fn render_sprite_line(&mut self, mmu: &mut Mmu) {
-        //TODO: Scroll_X is missing, y flip, palette
-        let current_line = mmu
-            .io_bus
-            .current_scanline
-            .wrapping_add(mmu.io_bus.scroll_y);
+        //TODO: palette
+        let current_line = mmu.io_bus.current_scanline;
+
+        let mut sprite_height = 8;
+
+        if is_bit_set(&mmu.io_bus.lcdc, 2) {
+            sprite_height = 16;
+        }
 
         for sprite_count in 0..40 {
             //Each sprite is consists for 4 bytes
             //0 = Y, 1 = X, 2 = Tile, 3 = Options
             let sprite_begin_address = OAM_ADDRESS + sprite_count * 4;
 
-            //Offset y = 16
-            let sprite_y = mmu.read_oam(sprite_begin_address).wrapping_sub(16);
+            let sprite_y = mmu.read_oam(sprite_begin_address);
             //Check if tile is at current scanline
-            if current_line >= sprite_y && current_line < sprite_y + 8 {
-                //Offset x = 8
-                let sprite_x = mmu.read_oam(sprite_begin_address + 1).wrapping_sub(8);
+            if current_line >= sprite_y && current_line < sprite_y + sprite_height {
+                let sprite_x = mmu.read_oam(sprite_begin_address + 1);
+
                 let sprite_tile = mmu.read_oam(sprite_begin_address + 2);
                 let sprite_options = mmu.read_oam(sprite_begin_address + 3);
 
                 let tile_begin_address = TILESET_FIRST_BEGIN_ADDRESS + (sprite_tile as u16 * 16);
 
                 //Get the offset fot addressing the pixel data in vram
-                let line_offset = current_line - sprite_y;
+                let mut line_offset = current_line - sprite_y;
+
+                line_offset = flip_y(&sprite_options, sprite_height, line_offset);
 
                 //Each tile consists of one byte at the y axes
                 let tile_data_address = tile_begin_address + (line_offset * 2) as u16;
@@ -192,8 +196,9 @@ impl<'a> Gpu<'a> {
                 let tile_color_data = mmu.read_vram(tile_color_data_address);
 
                 for x in 0..8 {
-                    let offset = mmu.io_bus.current_scanline as usize
-                        + 256 * (sprite_x as usize + x as usize);
+                    //Default offset: y = 16 x = 8
+                    let offset = mmu.io_bus.current_scanline.wrapping_sub(16) as usize
+                        + 256 * (sprite_x.wrapping_sub(8).wrapping_add(x)) as usize;
 
                     if self.background_has_priority_over_pixel(&sprite_options, offset) {
                         continue;
@@ -310,4 +315,11 @@ fn flip_x(sprite_options: &u8, x: u8) -> u8 {
     }
 
     7 - x
+}
+/// Checks the sprite options if x flip is needed and performs it
+fn flip_y(sprite_options: &u8, sprite_height: u8, y: u8) -> u8 {
+    if is_bit_set(&sprite_options, 6) {
+        return sprite_height - y;
+    }
+    y
 }

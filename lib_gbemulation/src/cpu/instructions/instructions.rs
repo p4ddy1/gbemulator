@@ -1354,6 +1354,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             clock_cycles_condition: None,
             description: "HALT",
             handler: |cpu: &mut Cpu, _: &mut Mmu, _: &Opcode| {
+                //TODO: Halt instructions slows emulation down. Check why. Also HALT Bug seems to be implemented wrong
                 cpu.is_halted = true;
                 ExecutionType::None
             },
