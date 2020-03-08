@@ -51,42 +51,9 @@ impl Cpu {
             }
         };
 
-        let mut clock_cycles = 4;
-        /*
-                    match op_code {
-                    Opcode::Regular(value) => {
-                        println!(
-                            "PC: 0x{:X} 0x{:X}: {}",
-                            self.registers.pc, value, instruction.description
-                        );
-                    }
-                    Opcode::CB(value) => {
-                        println!(
-                            "PC: 0x{:X} CB 0x{:X}: {}",
-                            self.registers.pc, value, instruction.description
-                        );
-                    }
-                }
-        */
-
-        if self.is_halted && any_interrupt_fired(mmu) {
-            self.is_halted = false;
-            if !self.interrupt_master_enabled {
-                //HALT Bug
-                self.registers.pc -= 1;
-            }
-        }
-
-        if !self.is_halted {
-            clock_cycles = self.execute_instruction(instruction, mmu, &op_code);
-        }
-
-        if self.interrupt_master_enabled {
-            match handle_interrupts(self, mmu) {
-                Some(cycles) => clock_cycles += cycles,
-                None => {}
-            }
-        }
+        /*  if self.registers.pc == 0x439C {
+            println!("test");
+        }*/
 
         match self.interrupt_action {
             InterruptAction::Enable => {
@@ -100,7 +67,41 @@ impl Cpu {
             _ => {}
         }
 
-        clock_cycles
+        /*  match op_code {
+            Opcode::Regular(value) => {
+                println!(
+                    "PC: 0x{:X} 0x{:X}: {}",
+                    self.registers.pc, value, instruction.description
+                );
+            }
+            Opcode::CB(value) => {
+                println!(
+                    "PC: 0x{:X} CB 0x{:X}: {}",
+                    self.registers.pc, value, instruction.description
+                );
+            }
+        }*/
+
+        if self.is_halted && any_interrupt_fired(mmu) {
+            self.is_halted = false;
+            if !self.interrupt_master_enabled {
+                //HALT Bug
+                self.registers.pc -= 1;
+            }
+        }
+
+        if self.is_halted {
+            return 4;
+        }
+
+        if self.interrupt_master_enabled {
+            match handle_interrupts(self, mmu) {
+                Some(cycles) => return cycles,
+                None => {}
+            }
+        }
+
+        self.execute_instruction(instruction, mmu, &op_code)
     }
 
     fn execute_instruction(
@@ -129,7 +130,6 @@ impl Cpu {
 
 pub fn any_interrupt_fired(mmu: &Mmu) -> bool {
     mmu.interrupts.interrupt_fired(&Interrupt::Vblank)
-        || mmu.interrupts.interrupt_fired(&Interrupt::Vblank)
         || mmu.interrupts.interrupt_fired(&Interrupt::LcdStat)
         || mmu.interrupts.interrupt_fired(&Interrupt::Timer)
         || mmu.interrupts.interrupt_fired(&Interrupt::Serial)
