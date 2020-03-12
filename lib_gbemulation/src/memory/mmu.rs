@@ -1,8 +1,8 @@
 use crate::cartridge::Cartridge;
 use crate::io::joypad::Joypad;
+use crate::memory::{interrupts, io_bus, ReadWrite};
 use crate::memory::interrupts::InterruptState;
 use crate::memory::io_bus::IoBus;
-use crate::memory::{interrupts, io_bus, ReadWrite};
 use crate::util::binary;
 
 const EXT_RAM_START_ADDRESS: u16 = 0xA000;

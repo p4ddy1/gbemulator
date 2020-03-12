@@ -51,10 +51,6 @@ impl Cpu {
             }
         };
 
-        /*  if self.registers.pc == 0x439C {
-            println!("test");
-        }*/
-
         match self.interrupt_action {
             InterruptAction::Enable => {
                 self.interrupt_master_enabled = true;

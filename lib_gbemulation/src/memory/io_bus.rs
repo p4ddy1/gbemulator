@@ -12,6 +12,8 @@ pub struct IoBus {
     pub stat: u8,
     pub scroll_y: u8,
     pub scroll_x: u8,
+    pub window_x: u8,
+    pub window_y: u8,
     pub bgpal: u8,
     pub lyc: u8,
     pub current_scanline: u8,
@@ -31,6 +33,8 @@ impl IoBus {
             stat: 0x84,
             scroll_y: 0,
             scroll_x: 0,
+            window_y: 0,
+            window_x: 7,
             bgpal: 0,
             lyc: 0,
             current_scanline: 0,
@@ -61,6 +65,8 @@ impl ReadWrite for IoBus {
             0xFF44 => self.current_scanline,
             0xFF45 => self.lyc,
             0xFF47 => self.bgpal,
+            0xFF4A => self.window_y,
+            0xFF4B => self.window_x,
             _ => self.unmapped[(address - IO_START_ADDRESS) as usize],
         }
     }
@@ -78,6 +84,8 @@ impl ReadWrite for IoBus {
             0xFF43 => self.scroll_x = value,
             0xFF45 => self.lyc = value,
             0xFF47 => self.bgpal = value,
+            0xFF4A => self.window_y = value,
+            0xFF4B => self.window_x = value,
             _ => self.unmapped[(address - IO_START_ADDRESS) as usize] = value,
         }
     }

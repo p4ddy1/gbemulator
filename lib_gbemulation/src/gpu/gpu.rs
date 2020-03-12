@@ -1,14 +1,14 @@
-use crate::gpu::screen::Screen;
 use crate::gpu::Pixel;
+use crate::gpu::screen::Screen;
 use crate::memory::interrupts::Interrupt;
 use crate::memory::mmu::Mmu;
-
 use crate::util::binary::{is_bit_set, reset_bit_in_byte, set_bit_in_byte};
 
 const OAM_ADDRESS: u16 = 0xFE00;
 const TILESET_FIRST_BEGIN_ADDRESS: u16 = 0x8000;
 const TILESET_SECOND_BEGIN_ADDRESS: u16 = 0x9000;
-const BGMAP_BEGIN_ADDRESS: u16 = 0x9800;
+const BGMAP_FIRST_BEGIN_ADDRESS: u16 = 0x9800;
+const BGMAP_SECOND_BEGIN_ADDRESS: u16 = 0x9C00;
 
 const CYCLES_OAM: u16 = 80;
 const CYCLES_VRAM: u16 = 172;
@@ -144,9 +144,16 @@ impl<'a> Gpu<'a> {
         }
     }
 
+    fn clear_screen(&mut self) {
+        for i in 0..256 * 256 + 256 {
+            self.screen_buffer[i] = Pixel::On;
+        }
+    }
+
     fn render_scanline_to_screen(&mut self, mmu: &mut Mmu) {
         //Bit 7 = LCD Enable. Disabled? Render nothing
         if !is_bit_set(&mmu.io_bus.lcdc, 7) {
+            self.clear_screen();
             return;
         }
 
@@ -159,7 +166,7 @@ impl<'a> Gpu<'a> {
 
     fn render_sprite_line(&mut self, mmu: &mut Mmu) {
         //TODO: palette
-        let current_line = mmu.io_bus.current_scanline;
+        let current_line = mmu.io_bus.current_scanline as i16;
 
         let mut sprite_height = 8;
 
@@ -172,20 +179,17 @@ impl<'a> Gpu<'a> {
             //0 = Y, 1 = X, 2 = Tile, 3 = Options
             let sprite_begin_address = OAM_ADDRESS + sprite_count * 4;
 
-            let sprite_y = mmu.read_oam(sprite_begin_address);
+            let sprite_y = mmu.read_oam(sprite_begin_address) as i16 - 16;
+            let sprite_x = mmu.read_oam(sprite_begin_address + 1) as i16 - 8;
+
             //Check if tile is at current scanline
             if current_line >= sprite_y && current_line < sprite_y + sprite_height {
-                let sprite_x = mmu.read_oam(sprite_begin_address + 1);
-
                 let sprite_tile = mmu.read_oam(sprite_begin_address + 2);
                 let sprite_options = mmu.read_oam(sprite_begin_address + 3);
 
                 let tile_begin_address = TILESET_FIRST_BEGIN_ADDRESS + (sprite_tile as u16 * 16);
 
-                //Get the offset fot addressing the pixel data in vram
-                let mut line_offset = current_line - sprite_y;
-
-                line_offset = flip_y(&sprite_options, sprite_height, line_offset);
+                let line_offset = flip_y(&sprite_options, current_line, sprite_height, sprite_y);
 
                 //Each tile consists of one byte at the y axes
                 let tile_data_address = tile_begin_address + (line_offset * 2) as u16;
@@ -196,11 +200,14 @@ impl<'a> Gpu<'a> {
                 let tile_color_data = mmu.read_vram(tile_color_data_address);
 
                 for x in 0..8 {
-                    //Default offset: y = 16 x = 8
-                    let offset = mmu.io_bus.current_scanline.wrapping_sub(16) as usize
-                        + 256 * (sprite_x.wrapping_sub(8).wrapping_add(x)) as usize;
+                    let x_offset = sprite_x + x as i16;
+                    if x_offset < 0 || x_offset > 160 {
+                        continue;
+                    }
 
-                    if self.background_has_priority_over_pixel(&sprite_options, offset) {
+                    let total_offset = current_line as usize + 256 * x_offset as usize;
+
+                    if self.background_has_priority_over_pixel(&sprite_options, total_offset) {
                         continue;
                     }
 
@@ -210,7 +217,7 @@ impl<'a> Gpu<'a> {
                         get_pixel(&self.bg_pal, tile_data, tile_color_data, pixel_index, true);
 
                     match pixel {
-                        Some(value) => self.screen_buffer[offset] = value,
+                        Some(value) => self.screen_buffer[total_offset] = value,
                         _ => {}
                     }
                 }
@@ -231,36 +238,38 @@ impl<'a> Gpu<'a> {
         true
     }
 
-    fn calculate_tile_address(&self, lcdc: &u8, tile_number: u8) -> u16 {
-        //Use first tileset, tile_number interpreted as unsigned
-        if is_bit_set(lcdc, 4) {
-            return TILESET_FIRST_BEGIN_ADDRESS + tile_number as u16 * 16;
-        }
-        //Use second tileset, tile_number interpreted as signed
-        TILESET_SECOND_BEGIN_ADDRESS.wrapping_add(((tile_number as i8) as u16).wrapping_mul(16))
-    }
-
     fn render_background_line(&mut self, mmu: &mut Mmu) {
         let y_bgmap = mmu
             .io_bus
             .current_scanline
-            .wrapping_add(mmu.io_bus.scroll_y) as u16;
-        let y_tile_address_offset = y_bgmap % 8 * 2;
+            .wrapping_add(mmu.io_bus.scroll_y);
 
-        //Each tile consists of 8 lines so we stay at one tile for 8 scanlines
-        let y_tile_address = BGMAP_BEGIN_ADDRESS + (y_bgmap as u16 / 8 * 32);
+        let window_enabled = is_bit_set(&mmu.io_bus.lcdc, 5);
 
-        //TODO: Implement tileset changing via LCDC
+        let line_is_window = window_enabled && mmu.io_bus.current_scanline >= mmu.io_bus.window_y;
+
         for x in 0..=160_u8 {
             let x_bgmap = x.wrapping_add(mmu.io_bus.scroll_x);
 
-            let tile_address = y_tile_address + (x_bgmap as u16 / 8);
+            let column_is_window = window_enabled && x >= mmu.io_bus.window_x - 7;
+
+            let tile_address = if line_is_window && column_is_window {
+                calculate_window_address(&mmu, mmu.io_bus.current_scanline, x)
+            } else {
+                calculate_bgmap_address(&mmu.io_bus.lcdc, y_bgmap, x_bgmap)
+            };
 
             let tile = mmu.read_vram(tile_address);
 
-            let tile_begin_address = self.calculate_tile_address(&mmu.io_bus.lcdc, tile);
+            let tile_begin_address = calculate_tile_address(&mmu.io_bus.lcdc, tile);
 
             //Each tile consists of one byte at the y axes
+            let y_tile_address_offset = if line_is_window && column_is_window {
+                (mmu.io_bus.current_scanline - mmu.io_bus.window_y) % 8 * 2
+            } else {
+                y_bgmap % 8 * 2
+            } as u16;
+
             let tile_data_address = tile_begin_address + y_tile_address_offset;
             //The color data sits one byte after the pixel data
             let tile_color_data_address = tile_data_address + 1;
@@ -268,7 +277,11 @@ impl<'a> Gpu<'a> {
             let tile_data = mmu.read_vram(tile_data_address);
             let tile_color_data = mmu.read_vram(tile_color_data_address);
 
-            let pixel_index = 7 - x_bgmap % 8;
+            let pixel_index = if column_is_window && line_is_window {
+                mmu.io_bus.window_x - x
+            } else {
+                7 - (x_bgmap % 8)
+            };
 
             let pixel =
                 get_pixel(&self.bg_pal, tile_data, tile_color_data, pixel_index, false).unwrap();
@@ -317,9 +330,45 @@ fn flip_x(sprite_options: &u8, x: u8) -> u8 {
     7 - x
 }
 /// Checks the sprite options if x flip is needed and performs it
-fn flip_y(sprite_options: &u8, sprite_height: u8, y: u8) -> u8 {
+fn flip_y(sprite_options: &u8, current_line: i16, sprite_height: i16, y: i16) -> i16 {
     if is_bit_set(&sprite_options, 6) {
-        return sprite_height - y;
+        return sprite_height - 1 - (current_line - y);
     }
-    y
+    current_line - y
+}
+
+fn calculate_address(base_address: u16, y: u8, x: u8) -> u16 {
+    base_address + (y as u16 / 8 * 32) + (x as u16 / 8)
+}
+
+fn calculate_bgmap_address(lcdc: &u8, y_bgmap: u8, x_bgmap: u8) -> u16 {
+    let address = if is_bit_set(lcdc, 3) {
+        BGMAP_SECOND_BEGIN_ADDRESS
+    } else {
+        BGMAP_FIRST_BEGIN_ADDRESS
+    };
+
+    calculate_address(address, y_bgmap, x_bgmap)
+}
+
+fn calculate_window_address(mmu: &Mmu, y: u8, x: u8) -> u16 {
+    let address = if is_bit_set(&mmu.io_bus.lcdc, 6) {
+        BGMAP_SECOND_BEGIN_ADDRESS
+    } else {
+        BGMAP_FIRST_BEGIN_ADDRESS
+    };
+
+    let y_offset = y.wrapping_sub(mmu.io_bus.window_y);
+    let x_offset = x.wrapping_sub(mmu.io_bus.window_x - 7);
+
+    calculate_address(address, y_offset, x_offset)
+}
+
+fn calculate_tile_address(lcdc: &u8, tile_number: u8) -> u16 {
+    //Use first tileset, tile_number interpreted as unsigned
+    if is_bit_set(lcdc, 4) {
+        return TILESET_FIRST_BEGIN_ADDRESS + tile_number as u16 * 16;
+    }
+    //Use second tileset, tile_number interpreted as signed
+    TILESET_SECOND_BEGIN_ADDRESS.wrapping_add(((tile_number as i8) as u16).wrapping_mul(16))
 }
