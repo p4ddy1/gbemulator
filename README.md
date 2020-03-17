@@ -15,11 +15,11 @@ Gameboy Emulator written from scratch in Rust. Currently under heavy development
 * Tetris works
 * Super Mario Land is playable
 * Timer
+* Window
+
 
 ### Todo
-* Switching the background set
-* Window
-* Some Sprite options
+* Palette switching
 * MBC
 * Interrupts (Serial and Joypad)
 * Sound
