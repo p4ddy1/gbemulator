@@ -1,5 +1,5 @@
 # GBemulator
-![BuildStatus](https://api.travis-ci.org/p4ddy1/gbemulator.svg?branch=master)
+![Build](https://github.com/p4ddy1/gbemulator/workflows/Build/badge.svg?branch=master)
 
 Gameboy Emulator written from scratch in Rust. Currently under heavy development.
 
