@@ -1,0 +1,19 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install build dependencies
+      run: sudo apt install libsdl2-dev
+    
+    - name: Build
+      run: cargo build --verbose
