@@ -1,0 +1,56 @@
+name: Create Linux Release Build
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  build_linux_amd64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install build dependencies
+        run: sudo apt -y install libsdl2-dev
+
+      - name: Build
+        run: cargo build --release --verbose
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: gbemulator_linux_amd64
+          path: target/release/gbemulator
+
+  create_release:
+    needs: build_linux_amd64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download linux build
+        uses: actions/download-artifact@v1
+        with:
+          name: gbemulator_linux
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+          prerelease: false
+
+      - name: Upload linux build as asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: gbemulator_linux_amd64/gbemulator
+          asset_name: gbemulator-linux-amd64
+          asset_content_type: application/octet-stream

@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Install build dependencies
-      run: sudo apt -y install libsdl2-dev
+      - name: Install build dependencies
+        run: sudo apt -y install libsdl2-dev
     
-    - name: Build
-      run: cargo build --verbose
+      - name: Build
+        run: cargo build --verbose
