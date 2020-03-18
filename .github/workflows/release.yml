@@ -32,7 +32,7 @@ jobs:
       - name: Download linux build
         uses: actions/download-artifact@v1
         with:
-          name: gbemulator_linux
+          name: gbemulator_linux_amd64
 
       - name: Create release
         id: create_release
