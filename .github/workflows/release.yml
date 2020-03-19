@@ -25,14 +25,51 @@ jobs:
           name: gbemulator_linux_amd64
           path: target/release/gbemulator
 
+  build_windows_amd64:
+    runs-on: windows-2019
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install build dependencies
+        run: vcpkg.exe install sdl2:x64-windows
+
+      - name: Build
+        run: |
+          $env:Path += ";" + $env:VCPKG_INSTALLATION_ROOT + "\installed\x64-windows\bin"
+          $env:Include = $env:VCPKG_INSTALLATION_ROOT + "\installed\x64-windows\include"
+          $env:Lib = $env:VCPKG_INSTALLATION_ROOT + "\installed\x64-windows\lib"
+          cargo build --release
+
+      - name: Create archive
+        run: |
+          mkdir artifacts
+          cp target/release/gbemulator.exe artifacts
+          cp ($env:VCPKG_INSTALLATION_ROOT + "\installed\x64-windows\bin\SDL2.dll") artifacts
+          Compress-Archive -Path artifacts\* -DestinationPath gbemulator_windows_amd64.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: gbemulator_windows_amd64
+          path: gbemulator_windows_amd64.zip
+
   create_release:
-    needs: build_linux_amd64
+    needs:
+      - build_linux_amd64
+      - build_windows_amd64
     runs-on: ubuntu-latest
     steps:
-      - name: Download linux build
+      - name: Download linux_amd64 build
         uses: actions/download-artifact@v1
         with:
           name: gbemulator_linux_amd64
+
+      - name: Download windows_amd64 build
+        uses: actions/download-artifact@v1
+        with:
+          name: gbemulator_windows_amd64
 
       - name: Create release
         id: create_release
@@ -45,12 +82,22 @@ jobs:
           draft: true
           prerelease: false
 
-      - name: Upload linux build as asset
+      - name: Upload linux_amd64 build as asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: gbemulator_linux_amd64/gbemulator
-          asset_name: gbemulator-linux-amd64
+          asset_name: gbemulator_linux_amd64
           asset_content_type: application/octet-stream
+
+      - name: Upload windows_amd64 build as asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: gbemulator_windows_amd64/gbemulator_windows_amd64.zip
+          asset_name: gbemulator_windows_amd64.zip
+          asset_content_type: application/zip
