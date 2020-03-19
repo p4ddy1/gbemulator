@@ -17,7 +17,9 @@ jobs:
         run: sudo apt -y install libsdl2-dev
 
       - name: Build
-        run: cargo build --release --verbose
+        run: |
+          cargo build --release --verbose
+          strip target/release/gbemulator
 
       - name: Upload artifact
         uses: actions/upload-artifact@v1
