@@ -119,6 +119,7 @@ impl<'a> Gpu<'a> {
                         self.set_mode(mmu, Mode::Vblank);
                         self.screen.render(&self.screen_buffer);
                         mmu.interrupts.fire_interrupt(&Interrupt::Vblank);
+                        self.clear_screen();
                     } else {
                         self.set_mode(mmu, Mode::Oam);
                     }
@@ -150,7 +151,9 @@ impl<'a> Gpu<'a> {
             return;
         }
 
-        self.render_background_line(mmu);
+        if is_bit_set(&mmu.io_bus.lcdc, 0) {
+            self.render_background_line(mmu);
+        }
 
         if is_bit_set(&mmu.io_bus.lcdc, 1) {
             self.render_sprite_line(mmu);
