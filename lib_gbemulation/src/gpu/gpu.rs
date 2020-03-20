@@ -1,5 +1,5 @@
-use crate::gpu::Pixel;
 use crate::gpu::screen::Screen;
+use crate::gpu::Pixel;
 use crate::memory::interrupts::Interrupt;
 use crate::memory::mmu::Mmu;
 use crate::util::binary::{is_bit_set, reset_bit_in_byte, set_bit_in_byte};
@@ -30,8 +30,10 @@ pub struct Gpu<'a> {
     clock: u16,
     mode: Mode,
     pub screen: &'a mut dyn Screen,
-    screen_buffer: [Pixel; 68000], //TODO: Find better length
+    screen_buffer: [Pixel; 65792],
     bg_pal: [Pixel; 4],
+    sprite_palette0: [Pixel; 4],
+    sprite_palette1: [Pixel; 4],
 }
 
 impl<'a> Gpu<'a> {
@@ -40,8 +42,10 @@ impl<'a> Gpu<'a> {
             clock: 0,
             mode: Mode::Hblank,
             screen: screen,
-            screen_buffer: [Pixel::Off; 68000],
+            screen_buffer: [Pixel::Off; 65792],
             bg_pal: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
+            sprite_palette0: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
+            sprite_palette1: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
         }
     }
 
@@ -83,22 +87,11 @@ impl<'a> Gpu<'a> {
         }
     }
 
-    pub fn set_bgpal(&mut self, value: u8) {
-        for i in 0..4 {
-            let color_data = value >> (i * 2) & 3;
-
-            self.bg_pal[i] = match color_data {
-                0 => Pixel::On,
-                1 => Pixel::Light,
-                2 => Pixel::Dark,
-                3 => Pixel::Off,
-                _ => Pixel::Off,
-            }
-        }
-    }
-
     pub fn step(&mut self, mmu: &mut Mmu, cycles: u8) {
         self.clock += cycles as u16;
+        set_palette(&mut self.bg_pal, mmu.io_bus.bg_palette);
+        set_palette(&mut self.sprite_palette0, mmu.io_bus.sprite_palette0);
+        set_palette(&mut self.sprite_palette1, mmu.io_bus.sprite_palette1);
         self.step_set_mode(mmu);
         self.compare_lyc(mmu);
     }
@@ -165,7 +158,6 @@ impl<'a> Gpu<'a> {
     }
 
     fn render_sprite_line(&mut self, mmu: &mut Mmu) {
-        //TODO: palette
         let current_line = mmu.io_bus.current_scanline as i16;
 
         let mut sprite_height = 8;
@@ -199,6 +191,12 @@ impl<'a> Gpu<'a> {
                 let tile_data = mmu.read_vram(tile_data_address);
                 let tile_color_data = mmu.read_vram(tile_color_data_address);
 
+                let sprite_palette = if is_bit_set(&sprite_options, 4) {
+                    &self.sprite_palette1
+                } else {
+                    &self.sprite_palette0
+                };
+
                 for x in 0..8 {
                     let x_offset = sprite_x + x as i16;
                     if x_offset < 0 || x_offset > 160 {
@@ -213,8 +211,13 @@ impl<'a> Gpu<'a> {
 
                     let pixel_index = flip_x(&sprite_options, x);
 
-                    let pixel =
-                        get_pixel(&self.bg_pal, tile_data, tile_color_data, pixel_index, true);
+                    let pixel = get_pixel(
+                        sprite_palette,
+                        tile_data,
+                        tile_color_data,
+                        pixel_index,
+                        true,
+                    );
 
                     match pixel {
                         Some(value) => self.screen_buffer[total_offset] = value,
@@ -371,4 +374,18 @@ fn calculate_tile_address(lcdc: &u8, tile_number: u8) -> u16 {
     }
     //Use second tileset, tile_number interpreted as signed
     TILESET_SECOND_BEGIN_ADDRESS.wrapping_add(((tile_number as i8) as u16).wrapping_mul(16))
+}
+
+fn set_palette(palette: &mut [Pixel], value: u8) {
+    for i in 0..4 {
+        let color_data = value >> (i * 2) & 3;
+
+        palette[i] = match color_data {
+            0 => Pixel::On,
+            1 => Pixel::Light,
+            2 => Pixel::Dark,
+            3 => Pixel::Off,
+            _ => Pixel::Off,
+        }
+    }
 }

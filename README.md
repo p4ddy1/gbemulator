@@ -10,16 +10,13 @@ Gameboy Emulator written from scratch in Rust. Currently under heavy development
 ### Working
 * Implemented almost all instructions (STOP still missing)
 * blargg's cpu_instr and instr_timing tests pass
-* Basic Background rendering is working
-* Basic Sprite rendering is working
-* Tetris works
-* Super Mario Land is playable
+* Rendering is working
+* Tetris, Dr. Mario, Super Mario Land, Kirby's Dreamland works
 * Timer
 * Window
 
 
 ### Todo
-* Palette switching
 * MBC
 * Interrupts (Serial and Joypad)
 * Sound

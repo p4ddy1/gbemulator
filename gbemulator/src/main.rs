@@ -1,16 +1,16 @@
 use std::{env, process};
 
 use sdl2::event::Event;
-use sdl2::EventPump;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
+use sdl2::EventPump;
 
 use lib_gbemulation::cartridge::mbc1_cartridge::Mbc1Cartridge;
 use lib_gbemulation::cpu::cpu::Cpu;
 use lib_gbemulation::emulation::Emulation;
-use lib_gbemulation::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use lib_gbemulation::gpu::gpu::Gpu;
 use lib_gbemulation::gpu::screen::SdlScreen;
+use lib_gbemulation::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use lib_gbemulation::io::joypad::{Joypad, Key};
 use lib_gbemulation::memory::mmu::Mmu;
 
@@ -67,12 +67,12 @@ fn main() {
     let mut emulation = Emulation::new();
 
     loop {
-        handle_sdl_events(&mut event_pump, &mut joypad, &mut mmu);
+        handle_sdl_events(&mut event_pump, &mut joypad);
         emulation.cycle(&mut cpu, &mut gpu, &mut mmu, &mut joypad);
     }
 }
 
-fn handle_sdl_events(event_pump: &mut EventPump, joypad: &mut Joypad, mmu: &mut Mmu) {
+fn handle_sdl_events(event_pump: &mut EventPump, joypad: &mut Joypad) {
     for event in event_pump.poll_iter() {
         match event {
             Event::KeyDown {
