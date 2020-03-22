@@ -34,6 +34,8 @@ pub struct Gpu<'a> {
     bg_pal: [Pixel; 4],
     sprite_palette0: [Pixel; 4],
     sprite_palette1: [Pixel; 4],
+    lcd_enabled: bool,
+    first_frame_after_activation: bool,
 }
 
 impl<'a> Gpu<'a> {
@@ -42,10 +44,12 @@ impl<'a> Gpu<'a> {
             clock: 0,
             mode: Mode::Hblank,
             screen: screen,
-            screen_buffer: [Pixel::Off; 65792],
+            screen_buffer: [Pixel::On; 65792],
             bg_pal: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
             sprite_palette0: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
             sprite_palette1: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
+            lcd_enabled: true,
+            first_frame_after_activation: true,
         }
     }
 
@@ -88,12 +92,33 @@ impl<'a> Gpu<'a> {
     }
 
     pub fn step(&mut self, mmu: &mut Mmu, cycles: u8) {
+        if !self.lcd_enabled && is_bit_set(&mmu.io_bus.lcdc, 7) {
+            self.lcd_enabled = true;
+            self.first_frame_after_activation = true;
+        }
+
+        if !self.lcd_enabled {
+            return;
+        }
+
         self.clock += cycles as u16;
+
+        //Bit 7 = LCD Enable. Disabled? Render nothing and reset the gpu state
+        if self.lcd_enabled && !is_bit_set(&mmu.io_bus.lcdc, 7) {
+            self.clear_screen();
+            mmu.io_bus.current_scanline = 0;
+            self.set_mode(mmu, Mode::Hblank);
+            self.clock = 0;
+            self.lcd_enabled = false;
+            return;
+        }
+
         set_palette(&mut self.bg_pal, mmu.io_bus.bg_palette);
         set_palette(&mut self.sprite_palette0, mmu.io_bus.sprite_palette0);
         set_palette(&mut self.sprite_palette1, mmu.io_bus.sprite_palette1);
-        self.step_set_mode(mmu);
         self.compare_lyc(mmu);
+
+        self.step_set_mode(mmu);
     }
 
     fn step_set_mode(&mut self, mmu: &mut Mmu) {
@@ -107,6 +132,7 @@ impl<'a> Gpu<'a> {
             Mode::Vram => {
                 if self.clock >= CYCLES_VRAM {
                     self.render_scanline_to_screen(mmu);
+                    mmu.io_bus.current_scanline += 1;
                     self.set_mode(mmu, Mode::Hblank);
                     self.clock = 0;
                 }
@@ -114,10 +140,9 @@ impl<'a> Gpu<'a> {
             Mode::Hblank => {
                 if self.clock >= CYCLES_HBLANK {
                     self.clock = 0;
-                    mmu.io_bus.current_scanline += 1;
                     if mmu.io_bus.current_scanline > SCANLINES_DISPLAY {
                         self.set_mode(mmu, Mode::Vblank);
-                        self.screen.render(&self.screen_buffer);
+                        self.render_screen();
                         mmu.interrupts.fire_interrupt(&Interrupt::Vblank);
                         self.clear_screen();
                     } else {
@@ -144,13 +169,17 @@ impl<'a> Gpu<'a> {
         }
     }
 
-    fn render_scanline_to_screen(&mut self, mmu: &mut Mmu) {
-        //Bit 7 = LCD Enable. Disabled? Render nothing
-        if !is_bit_set(&mmu.io_bus.lcdc, 7) {
-            self.clear_screen();
+    fn render_screen(&mut self) {
+        //First frame after the screen has been enabled will not be displayed
+        if self.first_frame_after_activation {
+            self.first_frame_after_activation = false;
             return;
         }
 
+        self.screen.render(&self.screen_buffer);
+    }
+
+    fn render_scanline_to_screen(&mut self, mmu: &mut Mmu) {
         if is_bit_set(&mmu.io_bus.lcdc, 0) {
             self.render_background_line(mmu);
         }
@@ -284,7 +313,7 @@ impl<'a> Gpu<'a> {
             let tile_color_data = mmu.read_vram(tile_color_data_address);
 
             let pixel_index = if column_is_window && line_is_window {
-                mmu.io_bus.window_x - x
+                mmu.io_bus.window_x.wrapping_sub(x) % 8
             } else {
                 7 - (x_bgmap % 8)
             };

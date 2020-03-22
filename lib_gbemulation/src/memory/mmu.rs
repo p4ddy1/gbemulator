@@ -29,8 +29,7 @@ pub struct Mmu<'a> {
     v_ram: [u8; V_RAM_SIZE],
     oam: [u8; OAM_SIZE],
     pub io_bus: IoBus,
-    pub interrupts: InterruptState,
-    dma_requested: Option<u8>,
+    pub interrupts: InterruptState
 }
 
 impl<'a> Mmu<'a> {
@@ -42,25 +41,12 @@ impl<'a> Mmu<'a> {
             v_ram: [0; V_RAM_SIZE],
             oam: [0; OAM_SIZE],
             io_bus: IoBus::new(),
-            interrupts: InterruptState::new(),
-            dma_requested: None,
+            interrupts: InterruptState::new()
         }
     }
 
-    pub fn step(&mut self, joypad: &mut Joypad) -> u8 {
-        let cycles = match self.dma_requested {
-            Some(source_address) => {
-                self.dma_transfer(source_address);
-                self.dma_requested = None;
-                //The transfer takes 160 machine cycles
-                160
-            }
-            None => 0,
-        };
-
+    pub fn step(&mut self, joypad: &mut Joypad) {
         self.io_bus.read_joypad(joypad);
-
-        cycles
     }
 
     fn dma_transfer(&mut self, source_address: u8) {
@@ -99,6 +85,7 @@ impl<'a> Mmu<'a> {
             0..=0x7FFF => self.cartridge.write(address, value),
             interrupts::INTERRUPT_FLAGS_ADDRESS => self.interrupts.interrupt_flags = value,
             interrupts::INTERRUPT_ENABLE_ADDRESS => self.interrupts.interrupts_enabled = value,
+            //TODO: Implement accurate dma
             0xFF46 => self.dma_transfer(value),
             io_bus::IO_START_ADDRESS..=0xFF7F => self.io_bus.write(address, value),
             H_RAM_ADDR..=0xFFFE => self.h_ram[(address - H_RAM_ADDR) as usize] = value,

@@ -2236,7 +2236,7 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
             description: "RET",
             handler: |cpu: &mut Cpu, mmu: &mut Mmu, _: &Opcode| {
                 cpu.registers.pc = mmu.read_word(cpu.registers.sp);
-                cpu.registers.sp += 2;
+                cpu.registers.sp = cpu.registers.sp.wrapping_add(2);
                 ExecutionType::Jumped
             },
         }),

@@ -31,7 +31,7 @@ impl Registers {
             l: 0x4D,
             f: 0xB0,
             pc: 0x100,
-            sp: 0,
+            sp: 0xFFFE,
         }
     }
 

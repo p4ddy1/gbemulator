@@ -24,13 +24,16 @@ impl<'a> SdlScreen<'a> {
         width: u16,
         height: u16,
     ) -> SdlScreen<'a> {
-        SdlScreen {
+        let mut screen = SdlScreen {
             width: width,
             height: height,
             canvas: canvas,
             texture: texture,
             buffer: vec![255; SCREEN_WIDTH as usize * SCREEN_HEIGHT as usize * 3],
-        }
+        };
+
+        screen.initialize();
+        screen
     }
 
     fn draw_pixel_to_buffer(&mut self, y: usize, x: usize, r: u8, g: u8, b: u8) {
@@ -38,6 +41,34 @@ impl<'a> SdlScreen<'a> {
         self.buffer[offset] = r;
         self.buffer[offset + 1] = g;
         self.buffer[offset + 2] = b;
+    }
+
+    fn output_buffer(&mut self) {
+        self.texture
+            .update(
+                Rect::new(0, 0, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32),
+                &self.buffer,
+                SCREEN_WIDTH as usize * 3,
+            )
+            .unwrap();
+
+        self.canvas
+            .copy(
+                &self.texture,
+                None,
+                Some(Rect::new(0, 0, self.width as u32, self.height as u32)),
+            )
+            .unwrap();
+    }
+
+    pub fn initialize(&mut self) {
+        for y in 0..SCREEN_HEIGHT as usize {
+            for x in 0..SCREEN_WIDTH as usize {
+                self.draw_pixel_to_buffer(y, x, 255, 246, 211);
+            }
+        }
+
+        self.output_buffer();
     }
 }
 
@@ -58,21 +89,7 @@ impl<'a> Screen for SdlScreen<'a> {
             }
         }
 
-        self.texture
-            .update(
-                Rect::new(0, 0, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32),
-                &self.buffer,
-                SCREEN_WIDTH as usize * 3,
-            )
-            .unwrap();
-
-        self.canvas
-            .copy(
-                &self.texture,
-                None,
-                Some(Rect::new(0, 0, self.width as u32, self.height as u32)),
-            )
-            .unwrap();
+        self.output_buffer();
     }
 
     fn present(&mut self) {

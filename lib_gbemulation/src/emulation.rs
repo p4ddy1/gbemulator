@@ -28,8 +28,8 @@ impl Emulation {
     pub fn cycle(&mut self, cpu: &mut Cpu, gpu: &mut Gpu, mmu: &mut Mmu, joypad: &mut Joypad) {
         //TODO: Check if this is the correct way
         while self.clock.clock_cycles_passed_frame < self.clock.clock_cycles_per_frame {
-            let mut last_cycle = cpu.step(mmu);
-            last_cycle += mmu.step(joypad);
+            let last_cycle = cpu.step(mmu);
+            mmu.step(joypad);
             gpu.step(mmu, last_cycle);
             self.clock.cycle(last_cycle);
             self.timer.step(mmu, last_cycle);

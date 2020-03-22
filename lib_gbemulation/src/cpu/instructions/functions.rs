@@ -416,18 +416,18 @@ pub fn and_bytes(cpu: &mut Cpu, byte1: u8, byte2: u8) -> u8 {
 }
 
 pub fn rst(cpu: &mut Cpu, mmu: &mut Mmu, param: u8) {
-    cpu.registers.sp -= 2;
+    cpu.registers.sp = cpu.registers.sp.wrapping_sub(2);
     mmu.write_word(cpu.registers.sp, cpu.registers.pc + 1);
     cpu.registers.pc = bytes_to_word(0x00, param);
 }
 
 pub fn call(cpu: &mut Cpu, mmu: &mut Mmu) {
     //Put address of next instruction onto stack and jump to aa
-    cpu.registers.sp -= 2;
+    cpu.registers.sp = cpu.registers.sp.wrapping_sub(2);
     mmu.write_word(cpu.registers.sp, cpu.registers.pc + 3);
     cpu.registers.pc = bytes_to_word(get_argument(cpu, mmu, 1), get_argument(cpu, mmu, 0));
 }
 
 pub fn get_argument(cpu: &Cpu, mmu: &Mmu, index: u16) -> u8 {
-    mmu.read(cpu.registers.pc + (index + 1))
+    mmu.read(cpu.registers.pc.wrapping_add(index + 1))
 }

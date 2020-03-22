@@ -51,19 +51,7 @@ impl Cpu {
             }
         };
 
-        match self.interrupt_action {
-            InterruptAction::Enable => {
-                self.interrupt_master_enabled = true;
-                self.interrupt_action = InterruptAction::None;
-            }
-            InterruptAction::Disable => {
-                self.interrupt_master_enabled = false;
-                self.interrupt_action = InterruptAction::None;
-            }
-            _ => {}
-        }
-
-        /*  match op_code {
+        /*match op_code {
             Opcode::Regular(value) => {
                 println!(
                     "PC: 0x{:X} 0x{:X}: {}",
@@ -95,6 +83,18 @@ impl Cpu {
                 Some(cycles) => return cycles,
                 None => {}
             }
+        }
+
+        match self.interrupt_action {
+            InterruptAction::Enable => {
+                self.interrupt_master_enabled = true;
+                self.interrupt_action = InterruptAction::None;
+            }
+            InterruptAction::Disable => {
+                self.interrupt_master_enabled = false;
+                self.interrupt_action = InterruptAction::None;
+            }
+            _ => {}
         }
 
         self.execute_instruction(instruction, mmu, &op_code)
