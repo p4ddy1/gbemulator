@@ -198,7 +198,7 @@ impl<'a> Gpu<'a> {
             sprite_height = 16;
         }
 
-        for sprite_count in 0..40 {
+        for sprite_count in (0..40).rev() {
             //Each sprite is consists for 4 bytes
             //0 = Y, 1 = X, 2 = Tile, 3 = Options
             let sprite_begin_address = OAM_ADDRESS + sprite_count * 4;
