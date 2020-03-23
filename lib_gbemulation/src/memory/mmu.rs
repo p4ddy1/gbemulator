@@ -29,7 +29,7 @@ pub struct Mmu<'a> {
     v_ram: [u8; V_RAM_SIZE],
     oam: [u8; OAM_SIZE],
     pub io_bus: IoBus,
-    pub interrupts: InterruptState
+    pub interrupts: InterruptState,
 }
 
 impl<'a> Mmu<'a> {
@@ -41,7 +41,7 @@ impl<'a> Mmu<'a> {
             v_ram: [0; V_RAM_SIZE],
             oam: [0; OAM_SIZE],
             io_bus: IoBus::new(),
-            interrupts: InterruptState::new()
+            interrupts: InterruptState::new(),
         }
     }
 

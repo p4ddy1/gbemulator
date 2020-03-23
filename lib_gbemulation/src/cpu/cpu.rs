@@ -51,7 +51,7 @@ impl Cpu {
             }
         };
 
-        /*match op_code {
+        /* match op_code {
             Opcode::Regular(value) => {
                 println!(
                     "PC: 0x{:X} 0x{:X}: {}",
