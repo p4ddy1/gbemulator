@@ -22,6 +22,12 @@ const CYCLES_VBLANK: u16 = 456;
 const SCANLINES_DISPLAY: u8 = 143;
 const MAX_SCANLINES: u8 = 153;
 
+#[derive(Copy, Clone)]
+enum PriorityFlag {
+    None,
+    Color0,
+}
+
 pub struct Gpu<'a> {
     pub screen: &'a mut dyn Screen,
     pub lcdc: Lcdc,
@@ -34,6 +40,7 @@ pub struct Gpu<'a> {
     pub interrupts_fired: u8,
     clock: u16,
     screen_buffer: [Pixel; 65792],
+    bg_priority_map: [PriorityFlag; 65792],
     v_ram: [u8; V_RAM_SIZE],
     oam: [u8; OAM_SIZE],
     lyc: u8,
@@ -59,12 +66,13 @@ impl<'a> Gpu<'a> {
             lyc: 0,
             interrupts_fired: 0,
             clock: 0,
-            screen_buffer: [Pixel::On; 65792],
+            screen_buffer: [Pixel::Color0; 65792],
+            bg_priority_map: [PriorityFlag::None; 65792],
             v_ram: [0; V_RAM_SIZE],
             oam: [0; OAM_SIZE],
-            bg_pal: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
-            sprite_palette0: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
-            sprite_palette1: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
+            bg_pal: [Pixel::Color0, Pixel::Color1, Pixel::Color2, Pixel::Color3],
+            sprite_palette0: [Pixel::Color0, Pixel::Color1, Pixel::Color2, Pixel::Color3],
+            sprite_palette1: [Pixel::Color0, Pixel::Color1, Pixel::Color2, Pixel::Color3],
             raw_palette_data: [0xFC, 0xFF, 0xFF],
             lcd_enabled: true,
             first_frame_after_activation: true,
@@ -247,7 +255,8 @@ impl<'a> Gpu<'a> {
 
     fn clear_screen(&mut self) {
         for i in 0..256 * 256 + 256 {
-            self.screen_buffer[i] = Pixel::On;
+            self.screen_buffer[i] = Pixel::Color0;
+            self.bg_priority_map[i] = PriorityFlag::None;
         }
     }
 
@@ -305,54 +314,25 @@ impl<'a> Gpu<'a> {
                 let tile_data = self.read_vram(tile_data_address);
                 let tile_color_data = self.read_vram(tile_color_data_address);
 
-                let sprite_palette = if is_bit_set(&sprite_options, 4) {
-                    &self.sprite_palette1
-                } else {
-                    &self.sprite_palette0
-                };
-
                 for x in 0..8 {
                     let x_offset = sprite_x + x as i16;
                     if x_offset < 0 || x_offset > 160 {
                         continue;
                     }
 
-                    let total_offset = current_line as usize + 256 * x_offset as usize;
-
-                    if self.background_has_priority_over_pixel(&sprite_options, total_offset) {
-                        continue;
-                    }
-
                     let pixel_index = flip_x(&sprite_options, x);
 
-                    let pixel = get_pixel(
-                        sprite_palette,
+                    self.draw_sprite_pixel(
                         tile_data,
                         tile_color_data,
+                        current_line as u8,
+                        x_offset as u8,
                         pixel_index,
-                        true,
+                        &sprite_options,
                     );
-
-                    match pixel {
-                        Some(value) => self.screen_buffer[total_offset] = value,
-                        _ => {}
-                    }
                 }
             }
         }
-    }
-
-    fn background_has_priority_over_pixel(&self, sprite_options: &u8, offset: usize) -> bool {
-        if !is_bit_set(&sprite_options, 7) {
-            return false;
-        }
-
-        match self.screen_buffer[offset] {
-            Pixel::On => return false,
-            _ => {}
-        };
-
-        true
     }
 
     fn render_background_line(&mut self) {
@@ -395,10 +375,13 @@ impl<'a> Gpu<'a> {
                 7 - (x_bgmap % 8)
             };
 
-            let pixel =
-                get_pixel(&self.bg_pal, tile_data, tile_color_data, pixel_index, false).unwrap();
-
-            self.screen_buffer[self.current_scanline as usize + 256 * x as usize] = pixel;
+            self.draw_background_pixel(
+                tile_data,
+                tile_color_data,
+                self.current_scanline,
+                x,
+                pixel_index,
+            );
         }
     }
 
@@ -433,36 +416,82 @@ impl<'a> Gpu<'a> {
         //Use second tileset, tile_number interpreted as signed
         TILESET_SECOND_BEGIN_ADDRESS.wrapping_add(((tile_number as i8) as u16).wrapping_mul(16))
     }
+
+    fn draw_sprite_pixel(
+        &mut self,
+        tile_data: u8,
+        tile_color_data: u8,
+        y: u8,
+        x: u8,
+        pixel_index: u8,
+        sprite_options: &u8,
+    ) {
+        let sprite_palette = if is_bit_set(&sprite_options, 4) {
+            &self.sprite_palette1
+        } else {
+            &self.sprite_palette0
+        };
+
+        let color_index = get_color_index(tile_data, tile_color_data, pixel_index);
+        //Color 0 is transparent for sprites
+        if color_index == 0 {
+            return;
+        }
+
+        let pixel = sprite_palette[color_index as usize];
+
+        let offset = y as usize + 256 * x as usize;
+
+        if self.background_has_priority_over_pixel(sprite_options, offset) {
+            return;
+        }
+
+        self.screen_buffer[offset] = pixel;
+    }
+
+    fn background_has_priority_over_pixel(&self, sprite_options: &u8, offset: usize) -> bool {
+        if !is_bit_set(&sprite_options, 7) {
+            return false;
+        }
+
+        //Sprite will only be behind colors 1-3
+        match self.bg_priority_map[offset] {
+            PriorityFlag::Color0 => false,
+            PriorityFlag::None => true,
+        }
+    }
+
+    fn draw_background_pixel(
+        &mut self,
+        tile_data: u8,
+        tile_color_data: u8,
+        y: u8,
+        x: u8,
+        pixel_index: u8,
+    ) {
+        let color_index = get_color_index(tile_data, tile_color_data, pixel_index);
+        let pixel = self.bg_pal[color_index as usize];
+        let offset = y as usize + 256 * x as usize;
+
+        //Set priority information for sprites. Sprite will never be behind color 0
+        if color_index == 0 {
+            self.bg_priority_map[offset] = PriorityFlag::Color0
+        }
+
+        self.screen_buffer[offset] = pixel;
+    }
 }
 
-fn get_pixel(
-    palette: &[Pixel],
-    tile_data: u8,
-    tile_color_data: u8,
-    pixel: u8,
-    sprite: bool,
-) -> Option<Pixel> {
-    let pixel_is_active = is_bit_set(&tile_data, pixel);
-    let pixel_color_bit = is_bit_set(&tile_color_data, pixel);
-
-    if pixel_is_active && pixel_color_bit {
-        return Some(palette[3]);
-    }
-
-    if pixel_is_active && !pixel_color_bit {
-        return Some(palette[1]);
-    }
-
-    //On sprite rendering this is transparent
-    if !pixel_is_active && !pixel_color_bit && !sprite {
-        return Some(palette[0]);
-    }
-
-    if !pixel_is_active && pixel_color_bit {
-        return Some(palette[2]);
-    }
-
-    None
+fn get_color_index(tile_data: u8, tile_color_data: u8, pixel_index: u8) -> u8 {
+    (if tile_data & (1 << pixel_index) > 0 {
+        1
+    } else {
+        0
+    }) | (if tile_color_data & (1 << pixel_index) > 0 {
+        1
+    } else {
+        0
+    }) << 1
 }
 
 /// Checks the sprite options if x flip is needed and performs it
@@ -490,11 +519,11 @@ fn set_palette(palette: &mut [Pixel], value: u8) {
         let color_data = value >> (i * 2) & 3;
 
         palette[i] = match color_data {
-            0 => Pixel::On,
-            1 => Pixel::Light,
-            2 => Pixel::Dark,
-            3 => Pixel::Off,
-            _ => Pixel::Off,
+            0 => Pixel::Color0,
+            1 => Pixel::Color1,
+            2 => Pixel::Color2,
+            3 => Pixel::Color3,
+            _ => Pixel::Color3,
         }
     }
 }

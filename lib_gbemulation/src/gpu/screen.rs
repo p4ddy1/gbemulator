@@ -81,10 +81,10 @@ impl<'a> Screen for SdlScreen<'a> {
                 let pixel = screen_buffer[y as usize + 256 * x as usize];
 
                 match pixel {
-                    Pixel::On => self.draw_pixel_to_buffer(y, x, 255, 246, 211),
-                    Pixel::Light => self.draw_pixel_to_buffer(y, x, 249, 168, 117),
-                    Pixel::Dark => self.draw_pixel_to_buffer(y, x, 235, 107, 111),
-                    Pixel::Off => self.draw_pixel_to_buffer(y, x, 124, 63, 88),
+                    Pixel::Color0 => self.draw_pixel_to_buffer(y, x, 255, 246, 211),
+                    Pixel::Color1 => self.draw_pixel_to_buffer(y, x, 249, 168, 117),
+                    Pixel::Color2 => self.draw_pixel_to_buffer(y, x, 235, 107, 111),
+                    Pixel::Color3 => self.draw_pixel_to_buffer(y, x, 124, 63, 88),
                 }
             }
         }

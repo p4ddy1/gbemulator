@@ -9,8 +9,8 @@ pub const SCALE: u8 = 4;
 
 #[derive(Clone, Copy)]
 pub enum Pixel {
-    Off,
-    Dark,
-    Light,
-    On,
+    Color3,
+    Color2,
+    Color1,
+    Color0,
 }
