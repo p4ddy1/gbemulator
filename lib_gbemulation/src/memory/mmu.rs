@@ -129,7 +129,12 @@ impl<'a> Mmu<'a> {
             0xFF48 => self.gpu.set_sprite_palette0(value),
             0xFF49 => self.gpu.set_sprite_palette1(value),
             0xFF4A => self.gpu.window_y = value,
-            0xFF4B => self.gpu.window_x = value,
+            0xFF4B => {
+                if value < 7 {
+                    return;
+                }
+                self.gpu.window_x = value
+            },
             H_RAM_ADDR..=0xFFFE => self.h_ram[(address - H_RAM_ADDR) as usize] = value,
             VRAM_ADDRESS..=0x9FFF => self.gpu.write_vram(address, value),
             OAM_ADDRESS..=0xFE9F => self.gpu.write_oam(address, value),

@@ -159,7 +159,6 @@ impl<'a> Gpu<'a> {
         }
 
         self.clock += cycles as u16;
-        self.compare_lyc();
         self.step_set_mode();
     }
 
@@ -172,20 +171,21 @@ impl<'a> Gpu<'a> {
             Mode::Oam => {
                 if self.clock >= CYCLES_OAM {
                     self.set_mode(Mode::Vram);
-                    self.clock = 0;
+                    self.clock = self.clock % CYCLES_OAM;
                 }
             }
             Mode::Vram => {
                 if self.clock >= CYCLES_VRAM {
                     self.render_scanline_to_screen();
                     self.set_mode(Mode::Hblank);
-                    self.clock = 0;
+                    self.clock = self.clock % CYCLES_VRAM;
                 }
             }
             Mode::Hblank => {
                 if self.clock >= CYCLES_HBLANK {
-                    self.clock = 0;
+                    self.clock = self.clock % CYCLES_HBLANK;
                     self.current_scanline += 1;
+                    self.compare_lyc();
                     if self.current_scanline > SCANLINES_DISPLAY {
                         self.set_mode(Mode::Vblank);
                         self.render_screen();
@@ -199,7 +199,7 @@ impl<'a> Gpu<'a> {
             Mode::Vblank => {
                 if self.clock >= CYCLES_VBLANK {
                     self.current_scanline += 1;
-                    self.clock = 0;
+                    self.clock = self.clock % CYCLES_VBLANK;
                     if self.current_scanline > MAX_SCANLINES {
                         self.set_mode(Mode::Oam);
                         self.current_scanline = 0;
@@ -215,7 +215,7 @@ impl<'a> Gpu<'a> {
             self.stat.coincidence_flag = true;
             if self.stat.coincidence_interrupt {
                 self.fire_interrupt(Interrupt::LcdStat);
-            } //TODO: Is this correct?
+            }
         }
     }
 
@@ -363,7 +363,7 @@ impl<'a> Gpu<'a> {
         for x in 0..=160_u8 {
             let x_bgmap = x.wrapping_add(self.scroll_x);
 
-            let column_is_window = self.lcdc.window_enabled && x >= self.window_x - 7;
+            let column_is_window = self.lcdc.window_enabled && x >= self.window_x.wrapping_sub(7);
 
             let tile_address = if line_is_window && column_is_window {
                 self.calculate_window_address(self.current_scanline, x)
@@ -410,7 +410,7 @@ impl<'a> Gpu<'a> {
         };
 
         let y_offset = y.wrapping_sub(self.window_y);
-        let x_offset = x.wrapping_sub(self.window_x - 7);
+        let x_offset = x.wrapping_sub(self.window_x.wrapping_sub(7));
 
         calculate_address(address, y_offset, x_offset)
     }
