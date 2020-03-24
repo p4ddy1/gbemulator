@@ -116,7 +116,6 @@ impl<'a> Gpu<'a> {
 
     pub fn set_lyc(&mut self, value: u8) {
         self.lyc = value;
-        self.compare_lyc();
     }
 
     pub fn get_lyc(&self) -> u8 {
@@ -160,6 +159,7 @@ impl<'a> Gpu<'a> {
         }
 
         self.clock += cycles as u16;
+        self.compare_lyc();
         self.step_set_mode();
     }
 
@@ -178,7 +178,6 @@ impl<'a> Gpu<'a> {
             Mode::Vram => {
                 if self.clock >= CYCLES_VRAM {
                     self.render_scanline_to_screen();
-                    self.current_scanline += 1;
                     self.set_mode(Mode::Hblank);
                     self.clock = 0;
                 }
@@ -186,6 +185,7 @@ impl<'a> Gpu<'a> {
             Mode::Hblank => {
                 if self.clock >= CYCLES_HBLANK {
                     self.clock = 0;
+                    self.current_scanline += 1;
                     if self.current_scanline > SCANLINES_DISPLAY {
                         self.set_mode(Mode::Vblank);
                         self.render_screen();
