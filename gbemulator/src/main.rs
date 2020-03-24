@@ -9,10 +9,12 @@ use lib_gbemulation::cartridge::mbc1_cartridge::Mbc1Cartridge;
 use lib_gbemulation::cpu::cpu::Cpu;
 use lib_gbemulation::emulation::Emulation;
 use lib_gbemulation::gpu::gpu::Gpu;
-use lib_gbemulation::gpu::screen::SdlScreen;
+use crate::screen::SdlScreen;
 use lib_gbemulation::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use lib_gbemulation::io::joypad::{Joypad, Key};
 use lib_gbemulation::memory::mmu::Mmu;
+
+mod screen;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -67,12 +69,14 @@ fn main() {
     let mut emulation = Emulation::new();
 
     loop {
-        handle_sdl_events(&mut event_pump, &mut joypad);
+        if !handle_sdl_events(&mut event_pump, &mut joypad) {
+            process::exit(0);
+        }
         emulation.cycle(&mut cpu, &mut mmu, &mut joypad);
     }
 }
 
-fn handle_sdl_events(event_pump: &mut EventPump, joypad: &mut Joypad) {
+fn handle_sdl_events(event_pump: &mut EventPump, joypad: &mut Joypad) -> bool {
     for event in event_pump.poll_iter() {
         match event {
             Event::KeyDown {
@@ -172,9 +176,11 @@ fn handle_sdl_events(event_pump: &mut EventPump, joypad: &mut Joypad) {
                 joypad.release_key(Key::Select);
             }
             Event::Quit { .. } => {
-                process::exit(0);
+                return false;
             }
             _ => {}
         }
     }
+
+    true
 }

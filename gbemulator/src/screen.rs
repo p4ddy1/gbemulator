@@ -1,13 +1,9 @@
-use crate::gpu::{Pixel, SCREEN_HEIGHT, SCREEN_WIDTH};
+use lib_gbemulation::gpu::{Pixel, SCREEN_HEIGHT, SCREEN_WIDTH, Screen};
 
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
-pub trait Screen {
-    fn render(&mut self, screen_buffer: &[Pixel; 65792]);
-    fn present(&mut self);
-}
 
 pub struct SdlScreen<'a> {
     pub width: u16,

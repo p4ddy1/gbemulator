@@ -1,5 +1,5 @@
 use crate::gpu::lcdc::Lcdc;
-use crate::gpu::screen::Screen;
+use crate::gpu::Screen;
 use crate::gpu::stat::{Mode, Stat};
 use crate::gpu::Pixel;
 use crate::memory::interrupts::Interrupt;
