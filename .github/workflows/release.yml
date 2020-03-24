@@ -1,4 +1,4 @@
-name: Create Linux Release Build
+name: Create Release Builds
 
 on:
   push:
