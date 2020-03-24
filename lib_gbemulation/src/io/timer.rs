@@ -1,5 +1,4 @@
 use crate::memory::interrupts::Interrupt;
-use crate::memory::mmu::Mmu;
 use crate::util::binary::is_bit_set;
 
 const DIVIDER_CYCLES: u32 = 256;
@@ -9,6 +8,11 @@ const SPEED_2_CYCLES: u32 = 64;
 const SPEED_3_CYCLES: u32 = 256;
 
 pub struct Timer {
+    pub divider: u8,
+    pub counter: u8,
+    pub modulo: u8,
+    pub timer_control: u8,
+    pub interrupts_fired: u8,
     clock_cycles_divider: u32,
     clock_cycles_timer: u32,
     has_overflowed: bool,
@@ -17,23 +21,28 @@ pub struct Timer {
 impl Timer {
     pub fn new() -> Timer {
         Timer {
+            divider: 0,
+            counter: 0,
+            modulo: 0,
+            timer_control: 0,
+            interrupts_fired: 0,
             clock_cycles_divider: 0,
             clock_cycles_timer: 0,
             has_overflowed: false,
         }
     }
 
-    pub fn step(&mut self, mmu: &mut Mmu, clock_cycles: u8) {
+    pub fn step(&mut self, clock_cycles: u8) {
         let cycles = clock_cycles as u32;
         self.clock_cycles_divider += cycles;
 
         while self.clock_cycles_divider >= DIVIDER_CYCLES {
-            mmu.io_bus.divider = mmu.io_bus.divider.wrapping_add(1);
+            self.divider = self.divider.wrapping_add(1);
             self.clock_cycles_divider -= DIVIDER_CYCLES;
         }
 
-        let speed = mmu.io_bus.timer_control << 6;
-        let running = is_bit_set(&mmu.io_bus.timer_control, 2);
+        let speed = self.timer_control << 6;
+        let running = is_bit_set(&self.timer_control, 2);
 
         if !running {
             return;
@@ -50,22 +59,26 @@ impl Timer {
         };
 
         if self.has_overflowed {
-            mmu.interrupts.fire_interrupt(&Interrupt::Timer);
-            mmu.io_bus.counter = mmu.io_bus.modulo;
+            self.fire_interrupt(Interrupt::Timer);
+            self.counter = self.modulo;
             self.has_overflowed = false;
         }
 
         //It could happen that the timer needs to be incremented multiple times within a given cycle
         while self.clock_cycles_timer >= timer_cycles {
-            if mmu.io_bus.counter == 255 {
+            if self.counter == 255 {
                 //Overflow does not happen immediately
                 self.has_overflowed = true;
-                mmu.io_bus.counter = 0;
+                self.counter = 0;
                 return;
             }
 
-            mmu.io_bus.counter += 1;
+            self.counter += 1;
             self.clock_cycles_timer -= timer_cycles;
         }
+    }
+
+    fn fire_interrupt(&mut self, interrupt: Interrupt) {
+        self.interrupts_fired |= interrupt as u8;
     }
 }

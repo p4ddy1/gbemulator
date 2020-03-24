@@ -1,15 +1,13 @@
-use crate::util::binary::{is_bit_set, reset_bit_in_byte, set_bit_in_byte};
-
 pub const INTERRUPT_ENABLE_ADDRESS: u16 = 0xFFFF;
 pub const INTERRUPT_FLAGS_ADDRESS: u16 = 0xFF0F;
 
 #[derive(Copy, Clone)]
 pub enum Interrupt {
-    Vblank = 0,
-    LcdStat = 1,
-    Timer = 2,
-    Serial = 3,
-    Joypad = 4,
+    Vblank = 0x01,
+    LcdStat = 0x02,
+    Timer = 0x04,
+    Serial = 0x08,
+    Joypad = 0x10,
 }
 
 pub struct InterruptState {
@@ -26,18 +24,17 @@ impl InterruptState {
     }
 
     pub fn fire_interrupt(&mut self, interrupt: &Interrupt) {
-        self.interrupt_flags = set_bit_in_byte(self.interrupt_flags, *interrupt as u8);
+        self.interrupt_flags |= *interrupt as u8;
     }
 
     pub fn interrupt_fired(&self, interrupt: &Interrupt) -> bool {
         let interrupt_value = *interrupt as u8;
-        let interrupt_fired = is_bit_set(&self.interrupt_flags, interrupt_value);
-        let interrupt_enabled = is_bit_set(&self.interrupts_enabled, interrupt_value);
 
-        interrupt_fired && interrupt_enabled
+        self.interrupt_flags & interrupt_value == interrupt_value
+            && self.interrupts_enabled & interrupt_value == interrupt_value
     }
 
     pub fn reset_interrupt(&mut self, interrupt: &Interrupt) {
-        self.interrupt_flags = reset_bit_in_byte(self.interrupt_flags, *interrupt as u8);
+        self.interrupt_flags &= *interrupt as u8 ^ 0xFF;
     }
 }

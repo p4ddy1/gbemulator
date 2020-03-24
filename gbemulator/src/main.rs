@@ -62,13 +62,13 @@ fn main() {
     let mut joypad = Joypad::new();
 
     let mut gpu = Gpu::new(&mut screen);
-    let mut mmu = Mmu::new(&mut cartridge);
+    let mut mmu = Mmu::new(&mut cartridge, &mut gpu);
     let mut cpu = Cpu::new();
     let mut emulation = Emulation::new();
 
     loop {
         handle_sdl_events(&mut event_pump, &mut joypad);
-        emulation.cycle(&mut cpu, &mut gpu, &mut mmu, &mut joypad);
+        emulation.cycle(&mut cpu, &mut mmu, &mut joypad);
     }
 }
 

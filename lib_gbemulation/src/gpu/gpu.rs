@@ -1,10 +1,14 @@
+use crate::gpu::lcdc::Lcdc;
 use crate::gpu::screen::Screen;
+use crate::gpu::stat::{Mode, Stat};
 use crate::gpu::Pixel;
 use crate::memory::interrupts::Interrupt;
-use crate::memory::mmu::Mmu;
-use crate::util::binary::{is_bit_set, reset_bit_in_byte, set_bit_in_byte};
+use crate::memory::mmu::{OAM_ADDRESS, VRAM_ADDRESS};
+use crate::util::binary::is_bit_set;
 
-const OAM_ADDRESS: u16 = 0xFE00;
+const V_RAM_SIZE: usize = 8192;
+const OAM_SIZE: usize = 160;
+
 const TILESET_FIRST_BEGIN_ADDRESS: u16 = 0x8000;
 const TILESET_SECOND_BEGIN_ADDRESS: u16 = 0x9000;
 const BGMAP_FIRST_BEGIN_ADDRESS: u16 = 0x9800;
@@ -18,22 +22,25 @@ const CYCLES_VBLANK: u16 = 456;
 const SCANLINES_DISPLAY: u8 = 143;
 const MAX_SCANLINES: u8 = 153;
 
-#[derive(Copy, Clone)]
-enum Mode {
-    Oam = 2,
-    Vram = 3,
-    Hblank = 0,
-    Vblank = 1,
-}
-
 pub struct Gpu<'a> {
-    clock: u16,
-    mode: Mode,
     pub screen: &'a mut dyn Screen,
+    pub lcdc: Lcdc,
+    pub stat: Stat,
+    pub current_scanline: u8,
+    pub scroll_y: u8,
+    pub scroll_x: u8,
+    pub window_x: u8,
+    pub window_y: u8,
+    pub interrupts_fired: u8,
+    clock: u16,
     screen_buffer: [Pixel; 65792],
+    v_ram: [u8; V_RAM_SIZE],
+    oam: [u8; OAM_SIZE],
+    lyc: u8,
     bg_pal: [Pixel; 4],
     sprite_palette0: [Pixel; 4],
     sprite_palette1: [Pixel; 4],
+    raw_palette_data: [u8; 3],
     lcd_enabled: bool,
     first_frame_after_activation: bool,
 }
@@ -41,125 +48,200 @@ pub struct Gpu<'a> {
 impl<'a> Gpu<'a> {
     pub fn new(screen: &'a mut dyn Screen) -> Gpu<'a> {
         Gpu {
-            clock: 0,
-            mode: Mode::Hblank,
             screen: screen,
+            current_scanline: 0,
+            lcdc: Lcdc::new(0x91),
+            stat: Stat::new(0x84),
+            scroll_y: 0,
+            scroll_x: 0,
+            window_y: 0,
+            window_x: 7,
+            lyc: 0,
+            interrupts_fired: 0,
+            clock: 0,
             screen_buffer: [Pixel::On; 65792],
+            v_ram: [0; V_RAM_SIZE],
+            oam: [0; OAM_SIZE],
             bg_pal: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
             sprite_palette0: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
             sprite_palette1: [Pixel::On, Pixel::Light, Pixel::Dark, Pixel::Off],
+            raw_palette_data: [0xFC, 0xFF, 0xFF],
             lcd_enabled: true,
             first_frame_after_activation: true,
         }
     }
 
-    fn compare_lyc(&mut self, mmu: &mut Mmu) {
-        mmu.io_bus.stat = reset_bit_in_byte(mmu.io_bus.stat, 2);
-        if mmu.io_bus.lyc == mmu.io_bus.current_scanline {
-            mmu.io_bus.stat = set_bit_in_byte(mmu.io_bus.stat, 2);
-            if is_bit_set(&mmu.io_bus.stat, 6) {
-                mmu.interrupts.fire_interrupt(&Interrupt::LcdStat);
-            } //TODO: Is this correct?
-        }
+    pub fn read_vram(&self, address: u16) -> u8 {
+        self.v_ram[(address - VRAM_ADDRESS) as usize]
     }
 
-    fn set_mode(&mut self, mmu: &mut Mmu, mode: Mode) {
-        mmu.io_bus.stat &= 0xC0;
-        mmu.io_bus.stat |= mode as u8 & 0x3F;
-        self.mode = mode;
-        self.fire_stat_interrupt(mmu);
+    pub fn write_vram(&mut self, address: u16, value: u8) {
+        self.v_ram[(address - VRAM_ADDRESS) as usize] = value;
     }
 
-    fn fire_stat_interrupt(&mut self, mmu: &mut Mmu) {
-        match self.mode {
-            Mode::Oam => {
-                if is_bit_set(&mmu.io_bus.stat, 5) {
-                    mmu.interrupts.fire_interrupt(&Interrupt::LcdStat);
-                }
-            }
-            Mode::Vram => {
-                if is_bit_set(&mmu.io_bus.stat, 3) {
-                    mmu.interrupts.fire_interrupt(&Interrupt::LcdStat);
-                }
-            }
-            Mode::Vblank => {
-                if is_bit_set(&mmu.io_bus.stat, 4) {
-                    mmu.interrupts.fire_interrupt(&Interrupt::LcdStat);
-                }
-            }
-            _ => {}
-        }
+    pub fn write_oam(&mut self, address: u16, value: u8) {
+        self.oam[(address - OAM_ADDRESS) as usize] = value;
     }
 
-    pub fn step(&mut self, mmu: &mut Mmu, cycles: u8) {
-        if !self.lcd_enabled && is_bit_set(&mmu.io_bus.lcdc, 7) {
+    pub fn read_oam(&self, address: u16) -> u8 {
+        self.oam[(address - OAM_ADDRESS) as usize]
+    }
+
+    pub fn set_bg_pal(&mut self, value: u8) {
+        self.raw_palette_data[0] = value;
+        set_palette(&mut self.bg_pal, value);
+    }
+
+    pub fn get_bg_pal(&self) -> u8 {
+        self.raw_palette_data[0]
+    }
+
+    pub fn set_sprite_palette0(&mut self, value: u8) {
+        self.raw_palette_data[1] = value;
+        set_palette(&mut self.sprite_palette0, value);
+    }
+
+    pub fn get_sprite_palette0(&self) -> u8 {
+        self.raw_palette_data[1]
+    }
+
+    pub fn set_sprite_palette1(&mut self, value: u8) {
+        self.raw_palette_data[2] = value;
+        set_palette(&mut self.sprite_palette1, value);
+    }
+
+    pub fn get_sprite_palette1(&self) -> u8 {
+        self.raw_palette_data[2]
+    }
+
+    pub fn set_lyc(&mut self, value: u8) {
+        self.lyc = value;
+        self.compare_lyc();
+    }
+
+    pub fn get_lyc(&self) -> u8 {
+        self.lyc
+    }
+
+    pub fn set_lcdc(&mut self, value: u8) {
+        self.lcdc.set_data(value);
+
+        //If LCD is renabled after it was disabled set flag so the first frame wont be rendered
+        if !self.lcd_enabled && self.lcdc.display_enabled {
             self.lcd_enabled = true;
             self.first_frame_after_activation = true;
         }
 
+        //If LCD is disabled reset the gpu state
+        if self.lcd_enabled && !self.lcdc.display_enabled {
+            self.clear_screen();
+            self.current_scanline = 0;
+            self.stat.mode = Mode::Hblank;
+            self.clock = 0;
+            self.lcd_enabled = false;
+        }
+    }
+
+    pub fn get_lcdc(&self) -> u8 {
+        self.lcdc.get_data()
+    }
+
+    pub fn set_stat(&mut self, value: u8) {
+        self.stat.set_data(value);
+    }
+
+    pub fn get_stat(&self) -> u8 {
+        self.stat.get_data()
+    }
+
+    pub fn step(&mut self, cycles: u8) {
         if !self.lcd_enabled {
             return;
         }
 
         self.clock += cycles as u16;
-
-        //Bit 7 = LCD Enable. Disabled? Render nothing and reset the gpu state
-        if self.lcd_enabled && !is_bit_set(&mmu.io_bus.lcdc, 7) {
-            self.clear_screen();
-            mmu.io_bus.current_scanline = 0;
-            self.set_mode(mmu, Mode::Hblank);
-            self.clock = 0;
-            self.lcd_enabled = false;
-            return;
-        }
-
-        set_palette(&mut self.bg_pal, mmu.io_bus.bg_palette);
-        set_palette(&mut self.sprite_palette0, mmu.io_bus.sprite_palette0);
-        set_palette(&mut self.sprite_palette1, mmu.io_bus.sprite_palette1);
-        self.compare_lyc(mmu);
-
-        self.step_set_mode(mmu);
+        self.step_set_mode();
     }
 
-    fn step_set_mode(&mut self, mmu: &mut Mmu) {
-        match self.mode {
+    fn fire_interrupt(&mut self, interrupt: Interrupt) {
+        self.interrupts_fired |= interrupt as u8;
+    }
+
+    fn step_set_mode(&mut self) {
+        match self.stat.mode {
             Mode::Oam => {
                 if self.clock >= CYCLES_OAM {
-                    self.set_mode(mmu, Mode::Vram);
+                    self.set_mode(Mode::Vram);
                     self.clock = 0;
                 }
             }
             Mode::Vram => {
                 if self.clock >= CYCLES_VRAM {
-                    self.render_scanline_to_screen(mmu);
-                    mmu.io_bus.current_scanline += 1;
-                    self.set_mode(mmu, Mode::Hblank);
+                    self.render_scanline_to_screen();
+                    self.current_scanline += 1;
+                    self.set_mode(Mode::Hblank);
                     self.clock = 0;
                 }
             }
             Mode::Hblank => {
                 if self.clock >= CYCLES_HBLANK {
                     self.clock = 0;
-                    if mmu.io_bus.current_scanline > SCANLINES_DISPLAY {
-                        self.set_mode(mmu, Mode::Vblank);
+                    if self.current_scanline > SCANLINES_DISPLAY {
+                        self.set_mode(Mode::Vblank);
                         self.render_screen();
-                        mmu.interrupts.fire_interrupt(&Interrupt::Vblank);
+                        self.fire_interrupt(Interrupt::Vblank);
                         self.clear_screen();
                     } else {
-                        self.set_mode(mmu, Mode::Oam);
+                        self.set_mode(Mode::Oam);
                     }
                 }
             }
             Mode::Vblank => {
                 if self.clock >= CYCLES_VBLANK {
-                    mmu.io_bus.current_scanline += 1;
+                    self.current_scanline += 1;
                     self.clock = 0;
-                    if mmu.io_bus.current_scanline > MAX_SCANLINES {
-                        self.set_mode(mmu, Mode::Oam);
-                        mmu.io_bus.current_scanline = 0;
+                    if self.current_scanline > MAX_SCANLINES {
+                        self.set_mode(Mode::Oam);
+                        self.current_scanline = 0;
                     }
                 }
             }
+        }
+    }
+
+    fn compare_lyc(&mut self) {
+        self.stat.coincidence_flag = false;
+        if self.lyc == self.current_scanline {
+            self.stat.coincidence_flag = true;
+            if self.stat.coincidence_interrupt {
+                self.fire_interrupt(Interrupt::LcdStat);
+            } //TODO: Is this correct?
+        }
+    }
+
+    fn set_mode(&mut self, mode: Mode) {
+        self.stat.mode = mode;
+        self.fire_stat_interrupt();
+    }
+
+    fn fire_stat_interrupt(&mut self) {
+        match self.stat.mode {
+            Mode::Oam => {
+                if self.stat.oam_interrupt {
+                    self.fire_interrupt(Interrupt::LcdStat);
+                }
+            }
+            Mode::Hblank => {
+                if self.stat.h_blank_interrupt {
+                    self.fire_interrupt(Interrupt::LcdStat);
+                }
+            }
+            Mode::Vblank => {
+                if self.stat.v_blank_interrupt {
+                    self.fire_interrupt(Interrupt::LcdStat);
+                }
+            }
+            _ => {}
         }
     }
 
@@ -179,22 +261,22 @@ impl<'a> Gpu<'a> {
         self.screen.render(&self.screen_buffer);
     }
 
-    fn render_scanline_to_screen(&mut self, mmu: &mut Mmu) {
-        if is_bit_set(&mmu.io_bus.lcdc, 0) {
-            self.render_background_line(mmu);
+    fn render_scanline_to_screen(&mut self) {
+        if self.lcdc.background_display {
+            self.render_background_line();
         }
 
-        if is_bit_set(&mmu.io_bus.lcdc, 1) {
-            self.render_sprite_line(mmu);
+        if self.lcdc.sprite_display {
+            self.render_sprite_line();
         }
     }
 
-    fn render_sprite_line(&mut self, mmu: &mut Mmu) {
-        let current_line = mmu.io_bus.current_scanline as i16;
+    fn render_sprite_line(&mut self) {
+        let current_line = self.current_scanline as i16;
 
         let mut sprite_height = 8;
 
-        if is_bit_set(&mmu.io_bus.lcdc, 2) {
+        if self.lcdc.sprite_size_big {
             sprite_height = 16;
         }
 
@@ -203,13 +285,13 @@ impl<'a> Gpu<'a> {
             //0 = Y, 1 = X, 2 = Tile, 3 = Options
             let sprite_begin_address = OAM_ADDRESS + sprite_count * 4;
 
-            let sprite_y = mmu.read_oam(sprite_begin_address) as i16 - 16;
-            let sprite_x = mmu.read_oam(sprite_begin_address + 1) as i16 - 8;
+            let sprite_y = self.read_oam(sprite_begin_address) as i16 - 16;
+            let sprite_x = self.read_oam(sprite_begin_address + 1) as i16 - 8;
 
             //Check if tile is at current scanline
             if current_line >= sprite_y && current_line < sprite_y + sprite_height {
-                let sprite_tile = mmu.read_oam(sprite_begin_address + 2);
-                let sprite_options = mmu.read_oam(sprite_begin_address + 3);
+                let sprite_tile = self.read_oam(sprite_begin_address + 2);
+                let sprite_options = self.read_oam(sprite_begin_address + 3);
 
                 let tile_begin_address = TILESET_FIRST_BEGIN_ADDRESS + (sprite_tile as u16 * 16);
 
@@ -220,8 +302,8 @@ impl<'a> Gpu<'a> {
                 //The color data sits one byte after the pixel data
                 let tile_color_data_address = tile_begin_address + (line_offset * 2) as u16 + 1;
 
-                let tile_data = mmu.read_vram(tile_data_address);
-                let tile_color_data = mmu.read_vram(tile_color_data_address);
+                let tile_data = self.read_vram(tile_data_address);
+                let tile_color_data = self.read_vram(tile_color_data_address);
 
                 let sprite_palette = if is_bit_set(&sprite_options, 4) {
                     &self.sprite_palette1
@@ -273,34 +355,29 @@ impl<'a> Gpu<'a> {
         true
     }
 
-    fn render_background_line(&mut self, mmu: &mut Mmu) {
-        let y_bgmap = mmu
-            .io_bus
-            .current_scanline
-            .wrapping_add(mmu.io_bus.scroll_y);
+    fn render_background_line(&mut self) {
+        let y_bgmap = self.current_scanline.wrapping_add(self.scroll_y);
 
-        let window_enabled = is_bit_set(&mmu.io_bus.lcdc, 5);
-
-        let line_is_window = window_enabled && mmu.io_bus.current_scanline >= mmu.io_bus.window_y;
+        let line_is_window = self.lcdc.window_enabled && self.current_scanline >= self.window_y;
 
         for x in 0..=160_u8 {
-            let x_bgmap = x.wrapping_add(mmu.io_bus.scroll_x);
+            let x_bgmap = x.wrapping_add(self.scroll_x);
 
-            let column_is_window = window_enabled && x >= mmu.io_bus.window_x - 7;
+            let column_is_window = self.lcdc.window_enabled && x >= self.window_x - 7;
 
             let tile_address = if line_is_window && column_is_window {
-                calculate_window_address(&mmu, mmu.io_bus.current_scanline, x)
+                self.calculate_window_address(self.current_scanline, x)
             } else {
-                calculate_bgmap_address(&mmu.io_bus.lcdc, y_bgmap, x_bgmap)
+                self.calculate_bgmap_address(y_bgmap, x_bgmap)
             };
 
-            let tile = mmu.read_vram(tile_address);
+            let tile = self.read_vram(tile_address);
 
-            let tile_begin_address = calculate_tile_address(&mmu.io_bus.lcdc, tile);
+            let tile_begin_address = self.calculate_tile_address(tile);
 
             //Each tile consists of one byte at the y axes
             let y_tile_address_offset = if line_is_window && column_is_window {
-                (mmu.io_bus.current_scanline - mmu.io_bus.window_y) % 8 * 2
+                (self.current_scanline - self.window_y) % 8 * 2
             } else {
                 y_bgmap % 8 * 2
             } as u16;
@@ -309,11 +386,11 @@ impl<'a> Gpu<'a> {
             //The color data sits one byte after the pixel data
             let tile_color_data_address = tile_data_address + 1;
 
-            let tile_data = mmu.read_vram(tile_data_address);
-            let tile_color_data = mmu.read_vram(tile_color_data_address);
+            let tile_data = self.read_vram(tile_data_address);
+            let tile_color_data = self.read_vram(tile_color_data_address);
 
             let pixel_index = if column_is_window && line_is_window {
-                mmu.io_bus.window_x.wrapping_sub(x) % 8
+                self.window_x.wrapping_sub(x) % 8
             } else {
                 7 - (x_bgmap % 8)
             };
@@ -321,8 +398,40 @@ impl<'a> Gpu<'a> {
             let pixel =
                 get_pixel(&self.bg_pal, tile_data, tile_color_data, pixel_index, false).unwrap();
 
-            self.screen_buffer[mmu.io_bus.current_scanline as usize + 256 * x as usize] = pixel;
+            self.screen_buffer[self.current_scanline as usize + 256 * x as usize] = pixel;
         }
+    }
+
+    fn calculate_window_address(&self, y: u8, x: u8) -> u16 {
+        let address = if self.lcdc.window_tilemap {
+            BGMAP_SECOND_BEGIN_ADDRESS
+        } else {
+            BGMAP_FIRST_BEGIN_ADDRESS
+        };
+
+        let y_offset = y.wrapping_sub(self.window_y);
+        let x_offset = x.wrapping_sub(self.window_x - 7);
+
+        calculate_address(address, y_offset, x_offset)
+    }
+
+    fn calculate_bgmap_address(&self, y_bgmap: u8, x_bgmap: u8) -> u16 {
+        let address = if self.lcdc.background_tilemap {
+            BGMAP_SECOND_BEGIN_ADDRESS
+        } else {
+            BGMAP_FIRST_BEGIN_ADDRESS
+        };
+
+        calculate_address(address, y_bgmap, x_bgmap)
+    }
+
+    fn calculate_tile_address(&self, tile_number: u8) -> u16 {
+        //Use first tileset, tile_number interpreted as unsigned
+        if self.lcdc.background_tiledata {
+            return TILESET_FIRST_BEGIN_ADDRESS + tile_number as u16 * 16;
+        }
+        //Use second tileset, tile_number interpreted as signed
+        TILESET_SECOND_BEGIN_ADDRESS.wrapping_add(((tile_number as i8) as u16).wrapping_mul(16))
     }
 }
 
@@ -374,38 +483,6 @@ fn flip_y(sprite_options: &u8, current_line: i16, sprite_height: i16, y: i16) ->
 
 fn calculate_address(base_address: u16, y: u8, x: u8) -> u16 {
     base_address + (y as u16 / 8 * 32) + (x as u16 / 8)
-}
-
-fn calculate_bgmap_address(lcdc: &u8, y_bgmap: u8, x_bgmap: u8) -> u16 {
-    let address = if is_bit_set(lcdc, 3) {
-        BGMAP_SECOND_BEGIN_ADDRESS
-    } else {
-        BGMAP_FIRST_BEGIN_ADDRESS
-    };
-
-    calculate_address(address, y_bgmap, x_bgmap)
-}
-
-fn calculate_window_address(mmu: &Mmu, y: u8, x: u8) -> u16 {
-    let address = if is_bit_set(&mmu.io_bus.lcdc, 6) {
-        BGMAP_SECOND_BEGIN_ADDRESS
-    } else {
-        BGMAP_FIRST_BEGIN_ADDRESS
-    };
-
-    let y_offset = y.wrapping_sub(mmu.io_bus.window_y);
-    let x_offset = x.wrapping_sub(mmu.io_bus.window_x - 7);
-
-    calculate_address(address, y_offset, x_offset)
-}
-
-fn calculate_tile_address(lcdc: &u8, tile_number: u8) -> u16 {
-    //Use first tileset, tile_number interpreted as unsigned
-    if is_bit_set(lcdc, 4) {
-        return TILESET_FIRST_BEGIN_ADDRESS + tile_number as u16 * 16;
-    }
-    //Use second tileset, tile_number interpreted as signed
-    TILESET_SECOND_BEGIN_ADDRESS.wrapping_add(((tile_number as i8) as u16).wrapping_mul(16))
 }
 
 fn set_palette(palette: &mut [Pixel], value: u8) {
