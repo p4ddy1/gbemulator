@@ -1,9 +1,8 @@
-use lib_gbemulation::gpu::{Pixel, SCREEN_HEIGHT, SCREEN_WIDTH, Screen};
+use lib_gbemulation::gpu::{Pixel, Screen, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
-
 
 pub struct SdlScreen<'a> {
     pub width: u16,

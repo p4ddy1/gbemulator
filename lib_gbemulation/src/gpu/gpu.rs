@@ -1,7 +1,7 @@
 use crate::gpu::lcdc::Lcdc;
-use crate::gpu::Screen;
 use crate::gpu::stat::{Mode, Stat};
 use crate::gpu::Pixel;
+use crate::gpu::Screen;
 use crate::memory::interrupts::Interrupt;
 use crate::memory::mmu::{OAM_ADDRESS, VRAM_ADDRESS};
 use crate::util::binary::is_bit_set;

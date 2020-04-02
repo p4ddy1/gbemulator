@@ -1,37 +1,51 @@
-use crate::cartridge::{Cartridge, EXT_RAM_ADDRESS, EXT_RAM_SIZE};
-use std::fs;
+use crate::cartridge::{
+    create_ram, get_ram_size, Cartridge, RamDumper, CARTRIDGE_TYPE_ADDRESS, EXT_RAM_ADDRESS,
+    EXT_RAM_SIZE,
+};
 
 enum Mode {
     RomBankingMode,
     RamBankingMode,
 }
 
-pub struct Mbc1Cartridge {
-    data: Vec<u8>,
-    ram: [u8; EXT_RAM_SIZE * 3],
+pub struct Mbc1 {
+    rom: Vec<u8>,
+    ram: Option<Vec<u8>>,
     selected_bank: u8,
     selected_ram_bank: u8,
     selected_mode: Mode,
     ram_enabled: bool,
+    has_battery: bool,
+    ram_dumper: Option<Box<dyn RamDumper>>,
 }
 
-impl Mbc1Cartridge {
-    pub fn new_from_file(filename: String) -> Result<Mbc1Cartridge, &'static str> {
-        let data = match fs::read(filename) {
-            Ok(data) => data,
-            Err(_) => {
-                return Err("Could not open file");
-            }
+impl Mbc1 {
+    pub fn new(rom: Vec<u8>, ram_dumper: Option<Box<dyn RamDumper>>) -> Self {
+        let cartridge_type = rom[CARTRIDGE_TYPE_ADDRESS];
+        let has_ram = cartridge_type == 0x02 || cartridge_type == 0x03;
+        let has_battery = cartridge_type == 0x03;
+
+        let ram = if has_ram {
+            create_ram(get_ram_size(&rom))
+        } else {
+            None
         };
 
-        Ok(Mbc1Cartridge {
-            data,
-            ram: [0; EXT_RAM_SIZE * 3],
+        let mut mbc = Mbc1 {
+            rom,
+            ram,
             selected_bank: 1,
             selected_ram_bank: 0,
             selected_mode: Mode::RomBankingMode,
             ram_enabled: false,
-        })
+            //TODO: Read this from rom
+            has_battery,
+            ram_dumper,
+        };
+
+        mbc.load_savegame();
+
+        mbc
     }
 
     fn get_ram_bank(&self) -> u8 {
@@ -42,15 +56,15 @@ impl Mbc1Cartridge {
     }
 }
 
-impl Cartridge for Mbc1Cartridge {
+impl Cartridge for Mbc1 {
     fn read(&self, address: u16) -> u8 {
         match address {
             //Bank 00. Read directly from rom
-            0x0..=0x3FFF => self.data[address as usize],
+            0x0..=0x3FFF => self.rom[address as usize],
             //Bank 01-7F
             0x4000..=0x7FFF => {
                 let offset = 0x4000 * self.selected_bank as usize;
-                self.data[(address as usize - 0x4000) + offset]
+                self.rom[(address as usize - 0x4000) + offset]
             }
             0x8888 => self.selected_bank,
             _ => panic!("Address unkown: 0x{:X}", address),
@@ -97,8 +111,12 @@ impl Cartridge for Mbc1Cartridge {
             return;
         }
 
-        let offset = EXT_RAM_SIZE * self.get_ram_bank() as usize;
-        self.ram[(address as usize - EXT_RAM_ADDRESS) + offset] = value;
+        let ram_bank = self.get_ram_bank() as usize;
+
+        if let Some(ref mut ram) = self.ram {
+            let offset = EXT_RAM_SIZE * ram_bank;
+            ram[(address as usize - EXT_RAM_ADDRESS) + offset] = value;
+        }
     }
 
     fn read_ram(&self, address: u16) -> u8 {
@@ -106,7 +124,37 @@ impl Cartridge for Mbc1Cartridge {
             return 0;
         }
 
-        let offset = EXT_RAM_SIZE * self.get_ram_bank() as usize;
-        self.ram[(address as usize - EXT_RAM_ADDRESS) + offset]
+        let ram_bank = self.get_ram_bank() as usize;
+
+        if let Some(ref ram) = self.ram {
+            let offset = EXT_RAM_SIZE * ram_bank;
+            return ram[(address as usize - EXT_RAM_ADDRESS) + offset];
+        }
+
+        0
+    }
+
+    fn dump_savegame(&self) {
+        if !self.has_battery {
+            return;
+        }
+
+        if let Some(ref ram) = self.ram {
+            if let Some(ref dumper) = self.ram_dumper {
+                dumper.dump(ram)
+            }
+        }
+    }
+
+    fn load_savegame(&mut self) {
+        if !self.has_battery {
+            return;
+        }
+
+        if let Some(ref mut ram) = self.ram {
+            if let Some(ref dumper) = self.ram_dumper {
+                *ram = dumper.load();
+            }
+        }
     }
 }

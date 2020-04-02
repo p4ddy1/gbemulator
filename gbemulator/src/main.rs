@@ -1,19 +1,21 @@
-use std::{env, process};
+use std::{env, fs, process};
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::EventPump;
 
-use lib_gbemulation::cartridge::mbc1_cartridge::Mbc1Cartridge;
+use crate::savegame::filesystem_ram_dumper::FilesystemRamDumper;
+use crate::screen::SdlScreen;
+use lib_gbemulation::cartridge;
 use lib_gbemulation::cpu::cpu::Cpu;
 use lib_gbemulation::emulation::Emulation;
 use lib_gbemulation::gpu::gpu::Gpu;
-use crate::screen::SdlScreen;
 use lib_gbemulation::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use lib_gbemulation::io::joypad::{Joypad, Key};
 use lib_gbemulation::memory::mmu::Mmu;
 
+mod savegame;
 mod screen;
 
 fn main() {
@@ -26,11 +28,21 @@ fn main() {
 
     let rom_filename = String::from(&args[1]);
 
-    let mut cartridge = match Mbc1Cartridge::new_from_file(rom_filename) {
-        Ok(c) => c,
-        Err(e) => {
-            println!("Error: {}", e);
-            process::exit(1);
+    let rom = match fs::read(&rom_filename) {
+        Ok(rom) => rom,
+        Err(_) => {
+            eprintln!("Could not open file {}", &rom_filename);
+            process::exit(2);
+        }
+    };
+
+    let ram_dumper = FilesystemRamDumper::new(&rom_filename);
+
+    let mut cartridge = match cartridge::new_cartridge(rom, Some(Box::new(ram_dumper))) {
+        Ok(cartridge) => cartridge,
+        Err(message) => {
+            eprintln!("{}", message);
+            process::exit(3);
         }
     };
 
@@ -64,12 +76,13 @@ fn main() {
     let mut joypad = Joypad::new();
 
     let mut gpu = Gpu::new(&mut screen);
-    let mut mmu = Mmu::new(&mut cartridge, &mut gpu);
+    let mut mmu = Mmu::new(&mut *cartridge, &mut gpu);
     let mut cpu = Cpu::new();
     let mut emulation = Emulation::new();
 
     loop {
         if !handle_sdl_events(&mut event_pump, &mut joypad) {
+            mmu.save();
             process::exit(0);
         }
         emulation.cycle(&mut cpu, &mut mmu, &mut joypad);

@@ -56,6 +56,10 @@ impl<'a> Mmu<'a> {
         self.timer.interrupts_fired = 0;
     }
 
+    pub fn save(&self) {
+        self.cartridge.dump_savegame();
+    }
+
     fn read_joypad(&mut self, joypad: &mut Joypad) {
         joypad.select_keys_by_write(self.joypad_select);
         self.joypad = joypad.read_input();
@@ -134,7 +138,7 @@ impl<'a> Mmu<'a> {
                     return;
                 }
                 self.gpu.window_x = value
-            },
+            }
             H_RAM_ADDR..=0xFFFE => self.h_ram[(address - H_RAM_ADDR) as usize] = value,
             VRAM_ADDRESS..=0x9FFF => self.gpu.write_vram(address, value),
             OAM_ADDRESS..=0xFE9F => self.gpu.write_oam(address, value),
