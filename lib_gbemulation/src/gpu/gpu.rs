@@ -124,6 +124,12 @@ impl<'a> Gpu<'a> {
 
     pub fn set_lyc(&mut self, value: u8) {
         self.lyc = value;
+        self.compare_lyc();
+    }
+
+    pub fn set_current_scanline(&mut self, value: u8) {
+        self.current_scanline = value;
+        self.compare_lyc();
     }
 
     pub fn get_lyc(&self) -> u8 {
@@ -142,7 +148,7 @@ impl<'a> Gpu<'a> {
         //If LCD is disabled reset the gpu state
         if self.lcd_enabled && !self.lcdc.display_enabled {
             self.clear_screen();
-            self.current_scanline = 0;
+            self.set_current_scanline(0);
             self.stat.mode = Mode::Hblank;
             self.clock = 0;
             self.lcd_enabled = false;
@@ -192,8 +198,8 @@ impl<'a> Gpu<'a> {
             Mode::Hblank => {
                 if self.clock >= CYCLES_HBLANK {
                     self.clock = self.clock % CYCLES_HBLANK;
-                    self.current_scanline += 1;
-                    self.compare_lyc();
+                    self.set_current_scanline(self.current_scanline + 1);
+
                     if self.current_scanline > SCANLINES_DISPLAY {
                         self.set_mode(Mode::Vblank);
                         self.render_screen();
@@ -206,11 +212,11 @@ impl<'a> Gpu<'a> {
             }
             Mode::Vblank => {
                 if self.clock >= CYCLES_VBLANK {
-                    self.current_scanline += 1;
+                    self.set_current_scanline(self.current_scanline + 1);
                     self.clock = self.clock % CYCLES_VBLANK;
                     if self.current_scanline > MAX_SCANLINES {
                         self.set_mode(Mode::Oam);
-                        self.current_scanline = 0;
+                        self.set_current_scanline(0);
                     }
                 }
             }
