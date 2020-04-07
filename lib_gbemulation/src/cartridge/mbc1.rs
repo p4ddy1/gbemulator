@@ -133,28 +133,4 @@ impl Cartridge for Mbc1 {
 
         0
     }
-
-    fn dump_savegame(&self) {
-        if !self.has_battery {
-            return;
-        }
-
-        if let Some(ref ram) = self.ram {
-            if let Some(ref dumper) = self.ram_dumper {
-                dumper.dump(ram)
-            }
-        }
-    }
-
-    fn load_savegame(&mut self) {
-        if !self.has_battery {
-            return;
-        }
-
-        if let Some(ref mut ram) = self.ram {
-            if let Some(ref dumper) = self.ram_dumper {
-                *ram = dumper.load();
-            }
-        }
-    }
 }

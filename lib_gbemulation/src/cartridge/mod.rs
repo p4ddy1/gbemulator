@@ -1,6 +1,7 @@
 use crate::cartridge::mbc1::Mbc1;
 
 pub mod mbc1;
+pub mod rom_only;
 
 pub const EXT_RAM_SIZE: usize = 8192;
 pub const EXT_RAM_ADDRESS: usize = 0xA000;
@@ -12,8 +13,33 @@ pub trait Cartridge {
     fn write(&mut self, address: u16, value: u8);
     fn write_ram(&mut self, address: u16, value: u8);
     fn read_ram(&self, address: u16) -> u8;
-    fn dump_savegame(&self);
-    fn load_savegame(&mut self);
+    fn get_ram(&self) -> Option<Vec<u8>>;
+    fn set_ram(&mut self, data: Vec<u8>);
+    fn get_ram_dumper(&self) -> Option<Box<dyn RamDumper>>;
+    fn has_battery(&self) -> bool;
+    fn dump_savegame(&self) {
+        if !self. has_battery(){
+            return;
+        }
+
+        if let Some(ref ram) = self.get_ram() {
+            if let Some(ref dumper) = self.get_ram_dumper() {
+                dumper.dump(ram)
+            }
+        }
+    }
+
+    fn load_savegame(&mut self) {
+        if !self.has_battery() {
+            return;
+        }
+
+        if let Some(ref mut ram) = self.get_ram() {
+            if let Some(ref dumper) = self.get_ram_dumper() {
+                *ram = dumper.load();
+            }
+        }
+    }
 }
 
 pub trait RamDumper {
