@@ -133,4 +133,22 @@ impl Cartridge for Mbc1 {
 
         0
     }
+
+    fn get_ram(&self) -> &Option<Vec<u8>> {
+        &self.ram
+    }
+
+    fn set_ram(&mut self, data: Vec<u8>) {
+        if let Some(ref mut ram) = self.ram {
+            *ram = data;
+        }
+    }
+
+    fn get_ram_dumper(&self) -> &Option<Box<dyn RamDumper>> {
+        &self.ram_dumper
+    }
+
+    fn has_battery(&self) -> bool {
+        self.has_battery
+    }
 }

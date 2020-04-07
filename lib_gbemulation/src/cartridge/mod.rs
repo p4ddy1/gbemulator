@@ -1,4 +1,5 @@
 use crate::cartridge::mbc1::Mbc1;
+use crate::cartridge::rom_only::RomOnlyCartridge;
 
 pub mod mbc1;
 pub mod rom_only;
@@ -13,12 +14,13 @@ pub trait Cartridge {
     fn write(&mut self, address: u16, value: u8);
     fn write_ram(&mut self, address: u16, value: u8);
     fn read_ram(&self, address: u16) -> u8;
-    fn get_ram(&self) -> Option<Vec<u8>>;
+    fn get_ram(&self) -> &Option<Vec<u8>>;
     fn set_ram(&mut self, data: Vec<u8>);
-    fn get_ram_dumper(&self) -> Option<Box<dyn RamDumper>>;
+    fn get_ram_dumper(&self) -> &Option<Box<dyn RamDumper>>;
     fn has_battery(&self) -> bool;
+
     fn dump_savegame(&self) {
-        if !self. has_battery(){
+        if !self.has_battery() {
             return;
         }
 
@@ -34,10 +36,9 @@ pub trait Cartridge {
             return;
         }
 
-        if let Some(ref mut ram) = self.get_ram() {
-            if let Some(ref dumper) = self.get_ram_dumper() {
-                *ram = dumper.load();
-            }
+        if let Some(ref dumper) = self.get_ram_dumper() {
+            let data = dumper.load();
+            self.set_ram(data);
         }
     }
 }
@@ -53,6 +54,7 @@ pub fn new_cartridge(
 ) -> Result<Box<dyn Cartridge>, String> {
     let cartridge_type = rom[CARTRIDGE_TYPE_ADDRESS];
     match cartridge_type {
+        0x00 | 0x08..=0x09 => Ok(Box::new(RomOnlyCartridge::new(rom, ram_dumper))),
         0x01..=0x03 => Ok(Box::new(Mbc1::new(rom, ram_dumper))),
         _ => Err(format!("Unknown cartridge type: 0x{:X}", cartridge_type)),
     }
