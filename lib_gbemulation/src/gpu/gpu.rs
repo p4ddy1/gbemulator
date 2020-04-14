@@ -198,7 +198,6 @@ impl<'a> Gpu<'a> {
             Mode::Hblank => {
                 if self.clock >= CYCLES_HBLANK {
                     self.clock = self.clock % CYCLES_HBLANK;
-                    self.set_current_scanline(self.current_scanline + 1);
 
                     if self.current_scanline > SCANLINES_DISPLAY {
                         self.set_mode(Mode::Vblank);
@@ -206,6 +205,7 @@ impl<'a> Gpu<'a> {
                         self.fire_interrupt(Interrupt::Vblank);
                         self.clear_screen();
                     } else {
+                        self.set_current_scanline(self.current_scanline + 1);
                         self.set_mode(Mode::Oam);
                     }
                 }
