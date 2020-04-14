@@ -1,10 +1,8 @@
-use crate::cartridge::{create_ram, get_ram_size, Cartridge, RamDumper, CARTRIDGE_TYPE_ADDRESS};
+use crate::cartridge::cartridge_base::CartridgeBase;
+use crate::cartridge::{Cartridge, RamDumper, CARTRIDGE_TYPE_ADDRESS, get_ram_size};
 
 pub struct RomOnlyCartridge {
-    rom: Vec<u8>,
-    ram: Option<Vec<u8>>,
-    has_battery: bool,
-    ram_dumper: Option<Box<dyn RamDumper>>,
+    cartridge_base: CartridgeBase,
 }
 
 impl RomOnlyCartridge {
@@ -12,25 +10,23 @@ impl RomOnlyCartridge {
         let cartridge_type = rom[CARTRIDGE_TYPE_ADDRESS];
         let has_ram = cartridge_type == 0x08 || cartridge_type == 0x09;
         let has_battery = cartridge_type == 0x09;
+        let ram_size = get_ram_size(&rom);
 
-        let ram = if has_ram {
-            create_ram(get_ram_size(&rom))
-        } else {
-            None
-        };
-
-        RomOnlyCartridge {
+        let cartridge_base = CartridgeBase::new(
             rom,
-            ram,
+            has_ram,
+            ram_size,
             has_battery,
-            ram_dumper,
-        }
+            ram_dumper
+        );
+
+        RomOnlyCartridge { cartridge_base }
     }
 }
 
 impl Cartridge for RomOnlyCartridge {
     fn read(&self, address: u16) -> u8 {
-        self.rom[address as usize]
+        self.cartridge_base.read(address)
     }
 
     fn write(&mut self, _address: u16, _value: u8) {
@@ -39,34 +35,18 @@ impl Cartridge for RomOnlyCartridge {
     }
 
     fn write_ram(&mut self, address: u16, value: u8) {
-        if let Some(ref mut ram) = self.ram {
-            ram[address as usize] = value;
-        }
+        self.cartridge_base.write_ram(address, value);
     }
 
     fn read_ram(&self, address: u16) -> u8 {
-        if let Some(ref ram) = self.ram {
-            return ram[address as usize];
-        }
-
-        0
+        self.cartridge_base.read_ram(address)
     }
 
-    fn get_ram(&self) -> &Option<Vec<u8>> {
-        &self.ram
+    fn dump_savegame(&self) {
+        self.cartridge_base.dump_savegame();
     }
 
-    fn set_ram(&mut self, data: Vec<u8>) {
-        if let Some(ref mut ram) = self.ram {
-            *ram = data;
-        }
-    }
-
-    fn get_ram_dumper(&self) -> &Option<Box<dyn RamDumper>> {
-        &self.ram_dumper
-    }
-
-    fn has_battery(&self) -> bool {
-        self.has_battery
+    fn load_savegame(&mut self) {
+        self.cartridge_base.load_savegame()
     }
 }

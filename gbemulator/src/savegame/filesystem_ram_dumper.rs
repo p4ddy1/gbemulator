@@ -26,7 +26,11 @@ impl RamDumper for FilesystemRamDumper {
         fs::write(&self.filename, data).unwrap();
     }
 
-    fn load(&self) -> Vec<u8> {
-        fs::read(&self.filename).unwrap()
+    fn load(&self) -> Option<Vec<u8>> {
+        if let Ok(data) = fs::read(&self.filename) {
+            return Some(data);
+        }
+
+        None
     }
 }
