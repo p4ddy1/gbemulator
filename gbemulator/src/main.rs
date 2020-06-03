@@ -43,6 +43,12 @@ fn main() {
 
     let rom_filename = String::from(&args[1]);
 
+    let (emulation_signal_sender, emulation_signal_receiver) = channel();
+
+    let audio_emulation_signal_sender = emulation_signal_sender.clone();
+    let mut audio_output = CpalAudioOutput::new(44100, 2048, Some(audio_emulation_signal_sender));
+    audio_output.start();
+
     //TODO: This SDL stuff is just for testing purposes. In the future a better method is needed with some GUI stuff
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -76,15 +82,8 @@ fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let (emulation_signal_sender, emulation_signal_receiver) = channel();
     let (event_sender, event_receiver) = channel();
     let (error_sender, error_receiver) = channel();
-
-    let audio_emulation_signal_sender = emulation_signal_sender.clone();
-
-    let mut audio_output = CpalAudioOutput::new(44100, 2048, Some(audio_emulation_signal_sender));
-
-    audio_output.start();
 
     let cloned_screen_buffer = Arc::clone(&screen_buffer);
 
