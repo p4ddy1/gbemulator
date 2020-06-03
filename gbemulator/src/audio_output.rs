@@ -73,9 +73,17 @@ impl CpalAudioOutput {
         };
 
         let event_loop = self.host.event_loop();
-        let device = self.selected_device.as_ref().unwrap();
 
-        let stream_id = event_loop.build_output_stream(device, &format).unwrap();
+        let stream_id = if let Some(selected_device) = &self.selected_device {
+            event_loop
+                .build_output_stream(selected_device, &format)
+                .unwrap()
+        } else {
+            event_loop
+                .build_output_stream(&self.host.default_output_device().unwrap(), &format)
+                .unwrap()
+        };
+
         event_loop.play_stream(stream_id).unwrap();
 
         let buffer = Arc::clone(&self.buffer);
@@ -105,7 +113,7 @@ fn event_loop_runner(
             if let Some(sender) = &sync_sender {
                 if buffer.data.len() < buffer.buffer_size / 2 {
                     match sender.send(EmulationSignal::Cycle) {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(_) => {
                             return;
                         }

@@ -84,7 +84,6 @@ fn main() {
 
     let mut audio_output = CpalAudioOutput::new(44100, 2048, Some(audio_emulation_signal_sender));
 
-    audio_output.set_device(String::from("pulse"));
     audio_output.start();
 
     let cloned_screen_buffer = Arc::clone(&screen_buffer);
