@@ -1,15 +1,17 @@
-use lib_gbemulation::gpu::{Pixel, Screen, SCREEN_HEIGHT, SCREEN_WIDTH};
+use lib_gbemulation::gpu::{Screen, SCREEN_HEIGHT, SCREEN_WIDTH};
 
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
+
+use std::sync::Mutex;
 
 pub struct SdlScreen<'a> {
     pub width: u16,
     pub height: u16,
     canvas: Canvas<Window>,
     texture: Texture<'a>,
-    buffer: Vec<u8>,
+    screen_buffer: &'a ScreenBuffer,
 }
 
 impl<'a> SdlScreen<'a> {
@@ -18,31 +20,30 @@ impl<'a> SdlScreen<'a> {
         texture: Texture<'a>,
         width: u16,
         height: u16,
+        screen_buffer: &'a ScreenBuffer,
     ) -> SdlScreen<'a> {
-        let mut screen = SdlScreen {
+        SdlScreen {
             width: width,
             height: height,
             canvas: canvas,
             texture: texture,
-            buffer: vec![255; SCREEN_WIDTH as usize * SCREEN_HEIGHT as usize * 3],
-        };
-
-        screen.initialize();
-        screen
-    }
-
-    fn draw_pixel_to_buffer(&mut self, y: usize, x: usize, r: u8, g: u8, b: u8) {
-        let offset = (SCREEN_WIDTH * 3 * y) + x * 3;
-        self.buffer[offset] = r;
-        self.buffer[offset + 1] = g;
-        self.buffer[offset + 2] = b;
+            screen_buffer,
+        }
     }
 
     fn output_buffer(&mut self) {
+        let current_buffer = self.screen_buffer.current_buffer.lock().unwrap();
+
+        let buffer = *if *current_buffer == 1 {
+            self.screen_buffer.buffer1.lock().unwrap()
+        } else {
+            self.screen_buffer.buffer2.lock().unwrap()
+        };
+
         self.texture
             .update(
                 Rect::new(0, 0, SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32),
-                &self.buffer,
+                &buffer,
                 SCREEN_WIDTH as usize * 3,
             )
             .unwrap();
@@ -56,38 +57,44 @@ impl<'a> SdlScreen<'a> {
             .unwrap();
     }
 
-    pub fn initialize(&mut self) {
-        for y in 0..SCREEN_HEIGHT as usize {
-            for x in 0..SCREEN_WIDTH as usize {
-                self.draw_pixel_to_buffer(y, x, 255, 246, 211);
-            }
-        }
-
+    pub fn present(&mut self) {
         self.output_buffer();
+        self.canvas.present();
     }
 }
 
-impl<'a> Screen for SdlScreen<'a> {
-    fn render(&mut self, screen_buffer: &[Pixel; 65792]) {
-        self.canvas.clear();
+pub struct ScreenBuffer {
+    pub buffer1: Mutex<[u8; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3]>,
+    pub buffer2: Mutex<[u8; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3]>,
+    pub current_buffer: Mutex<u8>,
+}
 
-        for y in 0..SCREEN_HEIGHT {
-            for x in 0..SCREEN_WIDTH {
-                let pixel = screen_buffer[y as usize + 256 * x as usize];
-
-                match pixel {
-                    Pixel::Color0 => self.draw_pixel_to_buffer(y, x, 255, 246, 211),
-                    Pixel::Color1 => self.draw_pixel_to_buffer(y, x, 249, 168, 117),
-                    Pixel::Color2 => self.draw_pixel_to_buffer(y, x, 235, 107, 111),
-                    Pixel::Color3 => self.draw_pixel_to_buffer(y, x, 124, 63, 88),
-                }
-            }
+impl ScreenBuffer {
+    pub fn new() -> Self {
+        ScreenBuffer {
+            buffer1: Mutex::new([255; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3]),
+            buffer2: Mutex::new([255; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3]),
+            current_buffer: Mutex::new(1),
         }
-
-        self.output_buffer();
     }
+}
 
-    fn present(&mut self) {
-        self.canvas.present();
+impl Screen for ScreenBuffer {
+    fn draw(&self, screen_buffer: &[u8; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3]) {
+        let mut current_buffer = self.current_buffer.lock().unwrap();
+
+        let mut buffer = if *current_buffer == 1 {
+            self.buffer1.lock().unwrap()
+        } else {
+            self.buffer2.lock().unwrap()
+        };
+
+        *buffer = *screen_buffer;
+
+        if *current_buffer == 1 {
+            *current_buffer = 2;
+        } else {
+            *current_buffer = 1;
+        }
     }
 }

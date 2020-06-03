@@ -1,5 +1,5 @@
 use crate::cartridge::cartridge_base::CartridgeBase;
-use crate::cartridge::{Cartridge, RamDumper, CARTRIDGE_TYPE_ADDRESS, get_ram_size};
+use crate::cartridge::{get_ram_size, Cartridge, RamDumper, CARTRIDGE_TYPE_ADDRESS};
 
 enum Mode {
     RomBankingMode,
@@ -18,13 +18,7 @@ impl Mbc1 {
         let has_battery = cartridge_type == 0x03;
         let ram_size = get_ram_size(&rom);
 
-        let cartridge_base = CartridgeBase::new(
-            rom,
-            has_ram,
-            ram_size,
-            has_battery,
-            ram_dumper
-        );
+        let cartridge_base = CartridgeBase::new(rom, has_ram, ram_size, has_battery, ram_dumper);
 
         Mbc1 {
             cartridge_base,
@@ -46,11 +40,7 @@ impl Cartridge for Mbc1 {
             //Address range for rom bank number
             0x2000..=0x3FFF => {
                 //0 is also 1
-                let bank_number = if value == 0 {
-                    1
-                } else {
-                    value
-                };
+                let bank_number = if value == 0 { 1 } else { value };
                 //Only set lower 5 bits
                 self.cartridge_base.rom_bank =
                     self.cartridge_base.rom_bank & 0x60 | bank_number & 0x1F;

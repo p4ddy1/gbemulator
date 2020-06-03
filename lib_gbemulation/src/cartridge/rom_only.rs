@@ -1,5 +1,5 @@
 use crate::cartridge::cartridge_base::CartridgeBase;
-use crate::cartridge::{Cartridge, RamDumper, CARTRIDGE_TYPE_ADDRESS, get_ram_size};
+use crate::cartridge::{get_ram_size, Cartridge, RamDumper, CARTRIDGE_TYPE_ADDRESS};
 
 pub struct RomOnlyCartridge {
     cartridge_base: CartridgeBase,
@@ -12,13 +12,7 @@ impl RomOnlyCartridge {
         let has_battery = cartridge_type == 0x09;
         let ram_size = get_ram_size(&rom);
 
-        let cartridge_base = CartridgeBase::new(
-            rom,
-            has_ram,
-            ram_size,
-            has_battery,
-            ram_dumper
-        );
+        let cartridge_base = CartridgeBase::new(rom, has_ram, ram_size, has_battery, ram_dumper);
 
         RomOnlyCartridge { cartridge_base }
     }

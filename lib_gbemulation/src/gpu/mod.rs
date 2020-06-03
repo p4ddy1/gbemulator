@@ -15,6 +15,5 @@ pub enum Pixel {
 }
 
 pub trait Screen {
-    fn render(&mut self, screen_buffer: &[Pixel; 65792]);
-    fn present(&mut self);
+    fn draw(&self, screen_buffer: &[u8; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3]);
 }

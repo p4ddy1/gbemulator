@@ -3,20 +3,20 @@ pub struct Clock {
     pub clock_cycles_passed_frame: usize,
     pub machine_cycles_passed_frame: usize,
     pub clock_cycles_per_frame: usize,
-    pub frame_time_ns: u64,
+    pub frame_time_s: f32,
 }
 
 impl Clock {
-    pub fn new(cpu_clock_hz: usize, fps: usize) -> Clock {
-        let clock_cycles_per_frame: usize = cpu_clock_hz / fps;
-        let frame_time: u64 = 1000000000 / fps as u64;
+    pub fn new(cpu_clock_hz: usize, fps: f32) -> Clock {
+        let clock_cycles_per_frame: usize = (cpu_clock_hz as f32 / fps) as usize;
+        let frame_time: f32 = 1.0 / fps;
 
         Clock {
             cpu_clock_hz: cpu_clock_hz,
             clock_cycles_passed_frame: 0,
             machine_cycles_passed_frame: 0,
             clock_cycles_per_frame: clock_cycles_per_frame,
-            frame_time_ns: frame_time,
+            frame_time_s: frame_time,
         }
     }
 
@@ -26,7 +26,8 @@ impl Clock {
     }
 
     pub fn reset(&mut self) {
-        self.clock_cycles_passed_frame = 0;
-        self.machine_cycles_passed_frame = 0;
+        let cycles_passed = self.clock_cycles_passed_frame;
+        self.clock_cycles_passed_frame = cycles_passed - self.clock_cycles_per_frame;
+        self.machine_cycles_passed_frame = (cycles_passed - self.clock_cycles_per_frame) / 4;
     }
 }

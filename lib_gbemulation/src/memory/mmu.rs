@@ -1,3 +1,5 @@
+use crate::apu::apu::Apu;
+
 use crate::cartridge::Cartridge;
 use crate::gpu::gpu::Gpu;
 use crate::io::joypad::Joypad;
@@ -22,9 +24,10 @@ pub enum Opcode {
 }
 
 pub struct Mmu<'a> {
-    pub gpu: &'a mut Gpu<'a>,
+    pub gpu: &'a mut Gpu,
     pub timer: Timer,
     pub interrupts: InterruptState,
+    pub apu: &'a mut Apu<'a>,
     w_ram: [u8; W_RAM_SIZE],
     h_ram: [u8; H_RAM_SIZE],
     joypad_select: u8,
@@ -33,23 +36,29 @@ pub struct Mmu<'a> {
 }
 
 impl<'a> Mmu<'a> {
-    pub fn new(cartridge: &'a mut dyn Cartridge, gpu: &'a mut Gpu<'a>) -> Mmu<'a> {
+    pub fn new(
+        cartridge: &'a mut dyn Cartridge,
+        gpu: &'a mut Gpu,
+        apu: &'a mut Apu<'a>,
+    ) -> Mmu<'a> {
         Mmu {
-            gpu: gpu,
+            gpu,
             timer: Timer::new(),
             interrupts: InterruptState::new(),
+            apu,
             w_ram: [0; W_RAM_SIZE],
             h_ram: [0; H_RAM_SIZE],
             joypad_select: 0xFF,
             joypad: 0xFF,
-            cartridge: cartridge,
+            cartridge,
         }
     }
 
-    pub fn step(&mut self, joypad: &mut Joypad, cyles: u8) {
+    pub fn step(&mut self, joypad: &mut Joypad, clock_cycles: u8) {
         self.read_joypad(joypad);
-        self.gpu.step(cyles);
-        self.timer.step(cyles);
+        self.gpu.step(clock_cycles);
+        self.timer.step(clock_cycles);
+        self.apu.step(clock_cycles);
         self.interrupts.interrupt_flags |= self.timer.interrupts_fired;
         self.interrupts.interrupt_flags |= self.gpu.interrupts_fired;
         self.gpu.interrupts_fired = 0;
@@ -93,6 +102,7 @@ impl<'a> Mmu<'a> {
             0xFF05 => self.timer.counter,
             0xFF06 => self.timer.modulo,
             0xFF07 => self.timer.timer_control,
+            0xFF10..=0xFF3F => self.apu.read(address),
             0xFF40 => self.gpu.get_lcdc(),
             0xFF41 => self.gpu.get_stat(),
             0xFF42 => self.gpu.scroll_y,
@@ -122,6 +132,7 @@ impl<'a> Mmu<'a> {
             0xFF05 => self.timer.counter = value,
             0xFF06 => self.timer.modulo = value,
             0xFF07 => self.timer.timer_control = value,
+            0xFF10..=0xFF3F => self.apu.write(address, value),
             0xFF40 => self.gpu.set_lcdc(value),
             0xFF41 => self.gpu.set_stat(value),
             0xFF42 => self.gpu.scroll_y = value,

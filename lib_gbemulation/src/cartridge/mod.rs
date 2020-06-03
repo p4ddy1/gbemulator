@@ -1,6 +1,6 @@
 use crate::cartridge::mbc1::Mbc1;
-use crate::cartridge::rom_only::RomOnlyCartridge;
 use crate::cartridge::mbc2::Mbc2;
+use crate::cartridge::rom_only::RomOnlyCartridge;
 
 pub mod cartridge_base;
 pub mod mbc1;

@@ -1,10 +1,11 @@
 use crate::gpu::lcdc::Lcdc;
 use crate::gpu::stat::{Mode, Stat};
-use crate::gpu::Pixel;
 use crate::gpu::Screen;
+use crate::gpu::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::memory::interrupts::Interrupt;
 use crate::memory::mmu::{OAM_ADDRESS, VRAM_ADDRESS};
 use crate::util::binary::is_bit_set;
+use std::sync::Arc;
 
 const V_RAM_SIZE: usize = 8192;
 const OAM_SIZE: usize = 160;
@@ -28,8 +29,8 @@ enum PriorityFlag {
     Color0,
 }
 
-pub struct Gpu<'a> {
-    pub screen: &'a mut dyn Screen,
+pub struct Gpu {
+    pub screen: Arc<dyn Screen>,
     pub lcdc: Lcdc,
     pub stat: Stat,
     pub current_scanline: u8,
@@ -39,21 +40,22 @@ pub struct Gpu<'a> {
     pub window_y: u8,
     pub interrupts_fired: u8,
     clock: u16,
-    screen_buffer: [Pixel; 65792],
+    screen_buffer: [u8; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3],
     bg_priority_map: [PriorityFlag; 65792],
     v_ram: [u8; V_RAM_SIZE],
     oam: [u8; OAM_SIZE],
     lyc: u8,
-    bg_pal: [Pixel; 4],
-    sprite_palette0: [Pixel; 4],
-    sprite_palette1: [Pixel; 4],
+    bg_pal: [u8; 4],
+    sprite_palette0: [u8; 4],
+    sprite_palette1: [u8; 4],
     raw_palette_data: [u8; 3],
+    color_map: [(u8, u8, u8); 4],
     lcd_enabled: bool,
     first_frame_after_activation: bool,
 }
 
-impl<'a> Gpu<'a> {
-    pub fn new(screen: &'a mut dyn Screen) -> Gpu<'a> {
+impl Gpu {
+    pub fn new(screen: Arc<dyn Screen>) -> Gpu {
         Gpu {
             screen: screen,
             current_scanline: 0,
@@ -66,14 +68,20 @@ impl<'a> Gpu<'a> {
             lyc: 0,
             interrupts_fired: 0,
             clock: 0,
-            screen_buffer: [Pixel::Color0; 65792],
+            screen_buffer: [0; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3],
             bg_priority_map: [PriorityFlag::None; 65792],
             v_ram: [0; V_RAM_SIZE],
             oam: [0; OAM_SIZE],
-            bg_pal: [Pixel::Color0, Pixel::Color1, Pixel::Color2, Pixel::Color3],
-            sprite_palette0: [Pixel::Color0, Pixel::Color1, Pixel::Color2, Pixel::Color3],
-            sprite_palette1: [Pixel::Color0, Pixel::Color1, Pixel::Color2, Pixel::Color3],
+            bg_pal: [0, 1, 2, 3],
+            sprite_palette0: [0, 1, 2, 3],
+            sprite_palette1: [0, 1, 2, 3],
             raw_palette_data: [0xFC, 0xFF, 0xFF],
+            color_map: [
+                (255, 246, 211),
+                (249, 168, 117),
+                (235, 107, 111),
+                (124, 63, 88),
+            ],
             lcd_enabled: true,
             first_frame_after_activation: true,
         }
@@ -167,12 +175,12 @@ impl<'a> Gpu<'a> {
         self.stat.get_data()
     }
 
-    pub fn step(&mut self, cycles: u8) {
+    pub fn step(&mut self, clock_cycles: u8) {
         if !self.lcd_enabled {
             return;
         }
 
-        self.clock += cycles as u16;
+        self.clock += clock_cycles as u16;
         self.step_set_mode();
     }
 
@@ -261,7 +269,7 @@ impl<'a> Gpu<'a> {
 
     fn clear_screen(&mut self) {
         for i in 0..256 * 256 + 256 {
-            self.screen_buffer[i] = Pixel::Color0;
+            self.screen_buffer[i] = 0;
             self.bg_priority_map[i] = PriorityFlag::None;
         }
     }
@@ -273,7 +281,7 @@ impl<'a> Gpu<'a> {
             return;
         }
 
-        self.screen.render(&self.screen_buffer);
+        self.screen.draw(&self.screen_buffer);
     }
 
     fn render_scanline_to_screen(&mut self) {
@@ -452,7 +460,7 @@ impl<'a> Gpu<'a> {
             return;
         }
 
-        self.screen_buffer[offset] = pixel;
+        self.draw_pixel_to_buffer(x as usize, y as usize, self.color_map[pixel as usize]);
     }
 
     fn background_has_priority_over_pixel(&self, sprite_options: &u8, offset: usize) -> bool {
@@ -484,7 +492,15 @@ impl<'a> Gpu<'a> {
             self.bg_priority_map[offset] = PriorityFlag::Color0
         }
 
-        self.screen_buffer[offset] = pixel;
+        self.draw_pixel_to_buffer(x as usize, y as usize, self.color_map[pixel as usize]);
+    }
+
+    fn draw_pixel_to_buffer(&mut self, x: usize, y: usize, rgb: (u8, u8, u8)) {
+        let offset = (SCREEN_WIDTH * 3 * y) + x * 3;
+
+        self.screen_buffer[offset] = rgb.0;
+        self.screen_buffer[offset + 1] = rgb.1;
+        self.screen_buffer[offset + 2] = rgb.2;
     }
 }
 
@@ -520,16 +536,16 @@ fn calculate_address(base_address: u16, y: u8, x: u8) -> u16 {
     base_address + (y as u16 / 8 * 32) + (x as u16 / 8)
 }
 
-fn set_palette(palette: &mut [Pixel], value: u8) {
+fn set_palette(palette: &mut [u8], value: u8) {
     for i in 0..4 {
         let color_data = value >> (i * 2) & 3;
 
         palette[i] = match color_data {
-            0 => Pixel::Color0,
-            1 => Pixel::Color1,
-            2 => Pixel::Color2,
-            3 => Pixel::Color3,
-            _ => Pixel::Color3,
+            0 => 0,
+            1 => 1,
+            2 => 2,
+            3 => 3,
+            _ => 3,
         }
     }
 }

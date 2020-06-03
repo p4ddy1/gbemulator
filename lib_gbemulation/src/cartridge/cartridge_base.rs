@@ -18,11 +18,7 @@ impl CartridgeBase {
         has_battery: bool,
         ram_dumper: Option<Box<dyn RamDumper>>,
     ) -> Self {
-        let ram = if has_ram {
-            create_ram(ram_size)
-        } else {
-            None
-        };
+        let ram = if has_ram { create_ram(ram_size) } else { None };
 
         let mut base = CartridgeBase {
             rom,
@@ -97,7 +93,7 @@ impl CartridgeBase {
         }
 
         if let Some(ref dumper) = self.ram_dumper {
-            if let Some(data) =  dumper.load() {
+            if let Some(data) = dumper.load() {
                 if let Some(ref mut ram) = self.ram {
                     *ram = data;
                 }
