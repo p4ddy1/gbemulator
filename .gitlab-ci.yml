@@ -2,8 +2,11 @@ build_windows:
   script:
     - vcpkg install sdl2:x64-windows
     - cargo build --release
+    - mkdir gbemulator_windows_amd64
+    - cp target/release/gbemulator.exe gbemulator_windows_amd64
+    - cp ($env:VCPKG_HOME + "\installed\x64-windows\bin\SDL2.dll") gbemulator_windows_amd64
   artifacts:
     paths:
-      - target/release/gbemulator.exe
+      - gbemulator_windows_amd64
   tags:
     - windows
