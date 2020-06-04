@@ -1,0 +1,9 @@
+build_windows:
+  script:
+    - vcpkg install sdl2:x64-windows
+    - cargo build --release
+  artifacts:
+    paths:
+      - target/release/gbemulator.exe
+  tags:
+    - windows
