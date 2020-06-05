@@ -1,4 +1,19 @@
+stages:
+  - build
+
+build_linux:
+  stage: build
+  script:
+    - cargo build --release
+    - cp target/release/gbemulator gbemulator_linux_amd64
+  artifacts:
+    paths:
+      - gbemulator_linux_amd64
+  tags:
+    - linux
+
 build_windows:
+  stage: build
   script:
     - vcpkg install sdl2:x64-windows
     - cargo build --release
