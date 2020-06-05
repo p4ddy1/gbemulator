@@ -6,6 +6,7 @@ build_linux:
   script:
     - cargo build --release
     - cp target/release/gbemulator gbemulator_linux_amd64
+    - strip gbemulator_linux_amd64
   artifacts:
     paths:
       - gbemulator_linux_amd64
