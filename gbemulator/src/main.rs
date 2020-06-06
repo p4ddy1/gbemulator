@@ -132,97 +132,97 @@ fn main() {
                     //TODO: Make this configurable
                     Ok(event) => match event {
                         Event::KeyDown {
-                            keycode: Some(Keycode::Right),
+                            keycode: Some(Keycode::D),
                             ..
                         } => {
                             joypad.push_key(Key::Right);
                         }
                         Event::KeyUp {
-                            keycode: Some(Keycode::Right),
+                            keycode: Some(Keycode::D),
                             ..
                         } => {
                             joypad.release_key(Key::Right);
                         }
                         Event::KeyDown {
-                            keycode: Some(Keycode::Left),
+                            keycode: Some(Keycode::A),
                             ..
                         } => {
                             joypad.push_key(Key::Left);
                         }
                         Event::KeyUp {
-                            keycode: Some(Keycode::Left),
+                            keycode: Some(Keycode::A),
                             ..
                         } => {
                             joypad.release_key(Key::Left);
                         }
                         Event::KeyDown {
-                            keycode: Some(Keycode::Down),
+                            keycode: Some(Keycode::S),
                             ..
                         } => {
                             joypad.push_key(Key::Down);
                         }
                         Event::KeyUp {
-                            keycode: Some(Keycode::Down),
+                            keycode: Some(Keycode::S),
                             ..
                         } => {
                             joypad.release_key(Key::Down);
                         }
                         Event::KeyDown {
-                            keycode: Some(Keycode::Up),
+                            keycode: Some(Keycode::W),
                             ..
                         } => {
                             joypad.push_key(Key::Up);
                         }
                         Event::KeyUp {
-                            keycode: Some(Keycode::Up),
+                            keycode: Some(Keycode::W),
                             ..
                         } => {
                             joypad.release_key(Key::Up);
                         }
                         Event::KeyDown {
-                            keycode: Some(Keycode::Space),
+                            keycode: Some(Keycode::Return),
                             ..
                         } => {
                             joypad.push_key(Key::Start);
                         }
                         Event::KeyUp {
-                            keycode: Some(Keycode::Space),
+                            keycode: Some(Keycode::Return),
                             ..
                         } => {
                             joypad.release_key(Key::Start);
                         }
                         Event::KeyDown {
-                            keycode: Some(Keycode::B),
+                            keycode: Some(Keycode::LShift),
                             ..
                         } => {
                             joypad.push_key(Key::B);
                         }
                         Event::KeyUp {
-                            keycode: Some(Keycode::B),
+                            keycode: Some(Keycode::LShift),
                             ..
                         } => {
                             joypad.release_key(Key::B);
                         }
                         Event::KeyDown {
-                            keycode: Some(Keycode::A),
+                            keycode: Some(Keycode::Space),
                             ..
                         } => {
                             joypad.push_key(Key::A);
                         }
                         Event::KeyUp {
-                            keycode: Some(Keycode::A),
+                            keycode: Some(Keycode::Space),
                             ..
                         } => {
                             joypad.release_key(Key::A);
                         }
                         Event::KeyDown {
-                            keycode: Some(Keycode::E),
+                            keycode: Some(Keycode::K),
                             ..
                         } => {
                             joypad.push_key(Key::Select);
                         }
                         Event::KeyUp {
-                            keycode: Some(Keycode::E),
+                            keycode: Some(Keycode::K),
                             ..
                         } => {
                             joypad.release_key(Key::Select);
