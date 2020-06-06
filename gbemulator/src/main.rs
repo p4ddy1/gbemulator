@@ -46,8 +46,12 @@ fn main() {
     let (emulation_signal_sender, emulation_signal_receiver) = channel();
 
     let audio_emulation_signal_sender = emulation_signal_sender.clone();
-    let mut audio_output = CpalAudioOutput::new(44100, 2048, Some(audio_emulation_signal_sender));
-    audio_output.start();
+    let mut audio_output = CpalAudioOutput::new(2048, Some(audio_emulation_signal_sender));
+
+    let default_device = audio_output.get_default_device_name();
+    println!("Using audio device: {}", default_device);
+
+    audio_output.start(default_device);
 
     //TODO: This SDL stuff is just for testing purposes. In the future a better method is needed with some GUI stuff
     let sdl_context = sdl2::init().unwrap();

@@ -1,6 +1,6 @@
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
 use cpal::{
-    Device, EventLoop, Format, Host, SampleFormat, SampleRate, StreamData, UnknownTypeOutputBuffer,
+    EventLoop, Format, Host, SampleFormat, StreamData, UnknownTypeOutputBuffer,
 };
 use lib_gbemulation::apu::AudioOutput;
 
@@ -26,28 +26,22 @@ impl AudioBuffer {
 }
 
 pub struct CpalAudioOutput {
-    sample_rate: u32,
+    sample_rate: Option<u32>,
     buffer: Arc<Mutex<AudioBuffer>>,
     host: Host,
-    selected_device: Option<Device>,
     sync_sender: Option<Sender<EmulationSignal>>,
 }
 
 impl CpalAudioOutput {
-    pub fn new(
-        sample_rate: u32,
-        buffer_size: usize,
-        sync_sender: Option<Sender<EmulationSignal>>,
-    ) -> Self {
+    pub fn new(buffer_size: usize, sync_sender: Option<Sender<EmulationSignal>>) -> Self {
         let buffer = Arc::new(Mutex::new(AudioBuffer::new(buffer_size * 2)));
 
         let host = cpal::default_host();
 
         CpalAudioOutput {
-            sample_rate,
+            sample_rate: None,
             buffer,
             host,
-            selected_device: None,
             sync_sender,
         }
     }
@@ -57,32 +51,30 @@ impl CpalAudioOutput {
         devices.map(|dev| dev.name().unwrap()).collect()
     }
 
-    pub fn set_device(&mut self, device_name: String) {
-        let mut devices = self.host.devices().unwrap();
-        let device = devices
-            .find(|dev| dev.name().unwrap() == device_name)
-            .unwrap();
-        self.selected_device = Some(device);
+    pub fn get_default_device_name(&self) -> String {
+        self.host.default_output_device().unwrap().name().unwrap()
     }
 
-    pub fn start(&self) {
+    pub fn start(&mut self, device_name: String) {
+        let event_loop = self.host.event_loop();
+
+        let mut device_list = self.host.devices().unwrap();
+
+        let device = device_list
+            .find(|dev| dev.name().unwrap() == device_name)
+            .unwrap();
+
+        let default_format = device.default_output_format().unwrap();
+
         let format = Format {
             channels: 2,
-            sample_rate: SampleRate(self.sample_rate),
+            sample_rate: default_format.sample_rate,
             data_type: SampleFormat::I16,
         };
 
-        let event_loop = self.host.event_loop();
+        self.sample_rate = Some(format.sample_rate.0);
 
-        let stream_id = if let Some(selected_device) = &self.selected_device {
-            event_loop
-                .build_output_stream(selected_device, &format)
-                .unwrap()
-        } else {
-            event_loop
-                .build_output_stream(&self.host.default_output_device().unwrap(), &format)
-                .unwrap()
-        };
+        let stream_id = event_loop.build_output_stream(&device, &format).unwrap();
 
         event_loop.play_stream(stream_id).unwrap();
 
@@ -147,6 +139,9 @@ impl AudioOutput for CpalAudioOutput {
     }
 
     fn get_sample_rate(&self) -> u32 {
-        self.sample_rate
+        match self.sample_rate {
+            Some(sample_rate) => sample_rate,
+            None => panic!("Sample rate is not set. Please initialize the audio device first")
+        }
     }
 }
