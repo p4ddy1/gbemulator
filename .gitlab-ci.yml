@@ -1,12 +1,14 @@
 stages:
   - build
+  - publish_artifacts
 
 build_linux:
   stage: build
   script:
     - cargo build --release
-    - cp target/release/gbemulator gbemulator_linux_amd64
-    - strip gbemulator_linux_amd64
+    - strip target/release/gbemulator
+    - mkdir gbemulator_linux_amd64
+    - cp target/release/gbemulator gbemulator_linux_amd64/gbemulator_linux_amd64
   artifacts:
     paths:
       - gbemulator_linux_amd64
@@ -26,3 +28,15 @@ build_windows:
       - gbemulator_windows_amd64
   tags:
     - windows
+
+upload_to_share:
+  stage: publish_artifacts
+  script:
+    - zip -r gbemulator_linux_amd64.zip gbemulator_linux_amd64
+    - zip -r gbemulator_windows_amd64.zip gbemulator_windows_amd64
+    - mkdir ${CI_COMMIT_REF_NAME}__${CI_COMMIT_SHORT_SHA}
+    - mv gbemulator_linux_amd64.zip ${CI_COMMIT_REF_NAME}__${CI_COMMIT_SHORT_SHA}
+    - mv gbemulator_windows_amd64.zip ${CI_COMMIT_REF_NAME}__${CI_COMMIT_SHORT_SHA}
+    - rsync -e "ssh -p 2222" -r ${CI_COMMIT_REF_NAME}__${CI_COMMIT_SHORT_SHA} uploader@builds.lpnw.de:/www/builds/gbemulator/
+  tags:
+    - linux
