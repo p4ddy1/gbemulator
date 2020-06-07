@@ -112,6 +112,10 @@ impl Channel for NoiseChannel {
     }
 
     fn step(&mut self, frame_sequencer: &FrameSequencer, clock_cycles: u8) {
+        if !self.enabled {
+            return;
+        }
+
         self.handle_length_counter(frame_sequencer);
         self.handle_volume_envelope(frame_sequencer);
 
