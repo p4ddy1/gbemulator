@@ -1,7 +1,5 @@
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
-use cpal::{
-    EventLoop, Format, Host, SampleFormat, StreamData, UnknownTypeOutputBuffer,
-};
+use cpal::{EventLoop, Format, Host, SampleFormat, StreamData, UnknownTypeOutputBuffer};
 use lib_gbemulation::apu::AudioOutput;
 
 use crate::EmulationSignal;
@@ -141,7 +139,7 @@ impl AudioOutput for CpalAudioOutput {
     fn get_sample_rate(&self) -> u32 {
         match self.sample_rate {
             Some(sample_rate) => sample_rate,
-            None => panic!("Sample rate is not set. Please initialize the audio device first")
+            None => panic!("Sample rate is not set. Please initialize the audio device first"),
         }
     }
 }

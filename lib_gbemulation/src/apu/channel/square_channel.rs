@@ -54,7 +54,7 @@ impl SquareChannel {
         self.frequency = self.frequency & 0xFF | (value as u16 & 0x7) << 8;
     }
 
-    pub fn set_length_counter_legth(&mut self, value: u8) {
+    pub fn set_length_counter_length(&mut self, value: u8) {
         self.length_counter.set_length(value & 0x3F);
     }
 
@@ -172,7 +172,7 @@ impl Channel for SquareChannel {
             }
             1 => {
                 self.set_duty(value);
-                self.set_length_counter_legth(value);
+                self.set_length_counter_length(value);
             }
             2 => self.volume_envelope.write(value),
             3 => self.set_frequency_lsb(value),

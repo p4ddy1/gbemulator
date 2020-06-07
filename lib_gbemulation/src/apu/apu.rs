@@ -1,4 +1,5 @@
 use crate::apu::channel::frame_sequencer::FrameSequencer;
+use crate::apu::channel::noise_channel::NoiseChannel;
 use crate::apu::channel::square_channel::SquareChannel;
 use crate::apu::channel::wave_channel::WaveChannel;
 use crate::apu::mixer::Mixer;
@@ -11,6 +12,8 @@ const SQUARE_CHANNEL_2_START_ADDRESS: u16 = 0xFF15;
 const SQUARE_CHANNEL_2_END_ADDRESS: u16 = 0xFF19;
 const WAVE_CHANNEL_START_ADDRESS: u16 = 0xFF1A;
 const WAVE_CHANNEL_END_ADDRESS: u16 = 0xFF1E;
+const NOISE_CHANNEL_START_ADDRESS: u16 = 0xFF1F;
+const NOISE_CHANNEL_END_ADDRESS: u16 = 0xFF23;
 
 pub struct Apu<'a> {
     pub audio_output: &'a mut dyn AudioOutput,
@@ -18,6 +21,7 @@ pub struct Apu<'a> {
     square_channel1: SquareChannel,
     square_channel2: SquareChannel,
     wave_channel: WaveChannel,
+    noise_channel: NoiseChannel,
     mixer: Mixer,
     clock: u16,
     output_step: u16,
@@ -32,6 +36,7 @@ impl<'a> Apu<'a> {
             square_channel1: SquareChannel::new(SQUARE_CHANNEL_1_START_ADDRESS, true),
             square_channel2: SquareChannel::new(SQUARE_CHANNEL_2_START_ADDRESS, false),
             wave_channel: WaveChannel::new(WAVE_CHANNEL_START_ADDRESS),
+            noise_channel: NoiseChannel::new(NOISE_CHANNEL_START_ADDRESS),
             mixer: Mixer::new(),
             clock: 0,
             output_step: output_step,
@@ -47,6 +52,7 @@ impl<'a> Apu<'a> {
         self.square_channel2
             .step(&self.frame_sequencer, clock_cycles);
         self.wave_channel.step(&self.frame_sequencer, clock_cycles);
+        self.noise_channel.step(&self.frame_sequencer, clock_cycles);
 
         //TODO: Do downsampling in a different way because this causes bad quality
         while self.clock >= self.output_step {
@@ -54,6 +60,7 @@ impl<'a> Apu<'a> {
                 &self.square_channel1,
                 &self.square_channel2,
                 &self.wave_channel,
+                &self.noise_channel,
             );
 
             self.audio_output.output((output_left, output_right));
@@ -71,6 +78,9 @@ impl<'a> Apu<'a> {
             }
             WAVE_CHANNEL_START_ADDRESS..=WAVE_CHANNEL_END_ADDRESS => {
                 self.wave_channel.write(address, value)
+            }
+            NOISE_CHANNEL_START_ADDRESS..=NOISE_CHANNEL_END_ADDRESS => {
+                self.noise_channel.write(address, value)
             }
             0xFF24..=0xFF26 => self.mixer.write(address, value),
             0xFF30..=0xFF3F => self.wave_channel.write_wavetable(address, value),

@@ -30,20 +30,21 @@ Controls are currently fixed and not configurable. You will be able to remap the
 * Implemented almost all instructions (STOP still missing)
 * blargg's cpu_instr and instr_timing tests pass
 * Rendering is working
-* Sound (Channnels 1,2,3)
+* Sound
 * Tetris, Dr. Mario, Super Mario Land 2, Kirby's Dreamland and a lot more are working
 * Timer
 * Window
 
 
 ### Todo
-* Noise Channel
+* Complete APU
 * Configuration for controls, audio output, etc
 * MBC
 * Interrupts (Serial and Joypad)
 * GUI
 * Probably a lot i forgot
 * Fix a few graphic glitches
+* Fix a few audio glitches
 
 ## Screenshots
 

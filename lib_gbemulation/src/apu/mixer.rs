@@ -1,3 +1,4 @@
+use crate::apu::channel::noise_channel::NoiseChannel;
 use crate::apu::channel::square_channel::SquareChannel;
 use crate::apu::channel::wave_channel::WaveChannel;
 use crate::apu::Channel;
@@ -34,6 +35,7 @@ impl Mixer {
         square_channel1: &SquareChannel,
         square_channel2: &SquareChannel,
         wave_channel: &WaveChannel,
+        noise_channel: &NoiseChannel,
     ) -> (i16, i16) {
         let mut output_left = 0;
         let mut output_right = 0;
@@ -60,6 +62,14 @@ impl Mixer {
             self.wave_left_enabled,
             self.wave_right_enabled,
             wave_channel,
+        );
+
+        mix_channel(
+            &mut output_left,
+            &mut output_right,
+            self.noise_left_enabled,
+            self.noise_right_enabled,
+            noise_channel,
         );
 
         (output_left, output_right)
