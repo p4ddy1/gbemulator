@@ -78,16 +78,11 @@ impl FrequencySweep {
         self.frequency = frequency;
         self.period_counter = 0;
 
-        if self.shift > 0 || self.period >= 1 {
+        if self.shift > 0 && self.period_load > 0 {
+            self.period = self.period_load as i8;
             self.enabled = true;
         } else {
             self.enabled = false;
-        }
-
-        if self.shift > 0 {
-            if !self.calculate_frequency() {
-                return FrequencySweepResult::Overflowed;
-            }
         }
 
         FrequencySweepResult::None

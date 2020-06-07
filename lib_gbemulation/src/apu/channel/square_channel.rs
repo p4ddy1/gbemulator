@@ -115,7 +115,6 @@ impl SquareChannel {
             }
             FrequencySweepResult::Sweeped(frequency) => {
                 self.frequency = frequency;
-                self.frequency_sweep.as_mut().unwrap().calculate_frequency();
             }
             _ => {}
         }
