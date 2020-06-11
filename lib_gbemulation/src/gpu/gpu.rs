@@ -1,6 +1,6 @@
 use crate::gpu::lcdc::Lcdc;
 use crate::gpu::stat::{Mode, Stat};
-use crate::gpu::Screen;
+use crate::gpu::{Screen, BUFFER_SIZE};
 use crate::gpu::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::memory::interrupts::Interrupt;
 use crate::memory::mmu::{OAM_ADDRESS, VRAM_ADDRESS};
@@ -40,7 +40,7 @@ pub struct Gpu {
     pub window_y: u8,
     pub interrupts_fired: u8,
     clock: u16,
-    screen_buffer: [u8; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3],
+    screen_buffer: [u8; BUFFER_SIZE],
     bg_priority_map: [PriorityFlag; 65792],
     v_ram: [u8; V_RAM_SIZE],
     oam: [u8; OAM_SIZE],
@@ -68,7 +68,7 @@ impl Gpu {
             lyc: 0,
             interrupts_fired: 0,
             clock: 0,
-            screen_buffer: [0; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3],
+            screen_buffer: [0; BUFFER_SIZE],
             bg_priority_map: [PriorityFlag::None; 65792],
             v_ram: [0; V_RAM_SIZE],
             oam: [0; OAM_SIZE],
@@ -207,7 +207,7 @@ impl Gpu {
                 if self.clock >= CYCLES_HBLANK {
                     self.clock = self.clock % CYCLES_HBLANK;
 
-                    if self.current_scanline > SCANLINES_DISPLAY {
+                    if self.current_scanline >= SCANLINES_DISPLAY {
                         self.set_mode(Mode::Vblank);
                         self.render_screen();
                         self.fire_interrupt(Interrupt::Vblank);
@@ -330,7 +330,7 @@ impl Gpu {
 
                 for x in 0..8 {
                     let x_offset = sprite_x + x as i16;
-                    if x_offset < 0 || x_offset > 160 {
+                    if x_offset < 0 || x_offset >= 160 {
                         continue;
                     }
 
@@ -354,7 +354,7 @@ impl Gpu {
 
         let line_is_window = self.lcdc.window_enabled && self.current_scanline >= self.window_y;
 
-        for x in 0..=160_u8 {
+        for x in 0..160_u8 {
             let x_bgmap = x.wrapping_add(self.scroll_x);
 
             let column_is_window = self.lcdc.window_enabled && x >= self.window_x.wrapping_sub(7);
@@ -496,7 +496,7 @@ impl Gpu {
     }
 
     fn draw_pixel_to_buffer(&mut self, x: usize, y: usize, rgb: (u8, u8, u8)) {
-        let offset = (SCREEN_WIDTH * 3 * y) + x * 3;
+        let offset = (x * 3) + (y * SCREEN_WIDTH * 3);
 
         self.screen_buffer[offset] = rgb.0;
         self.screen_buffer[offset + 1] = rgb.1;

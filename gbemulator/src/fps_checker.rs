@@ -2,9 +2,9 @@ use std::time::{Duration, Instant};
 
 pub struct FpsChecker {
     pub fps_bound: u16,
+    pub average_frames: u16,
     frame_counter: u16,
     elapsed_time: Instant,
-    average_frames: u16,
     frame_sum: u16,
     sample_count: u16,
     active: bool,
@@ -14,8 +14,8 @@ impl FpsChecker {
     pub fn new(fps_bound: u16) -> Self {
         FpsChecker {
             frame_counter: 0,
-            elapsed_time: Instant::now(),
             average_frames: 0,
+            elapsed_time: Instant::now(),
             frame_sum: 0,
             sample_count: 0,
             active: true,
@@ -36,7 +36,7 @@ impl FpsChecker {
             self.frame_counter = 0;
             self.elapsed_time = Instant::now();
 
-            if self.sample_count > 3 {
+            if self.sample_count > 1 {
                 self.average_frames = self.frame_sum / self.sample_count;
                 self.frame_sum = 0;
                 self.sample_count = 0;

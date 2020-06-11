@@ -1,12 +1,7 @@
 use std::{env, fs, process, thread};
 
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::PixelFormatEnum;
-
 use crate::audio_output::CpalAudioOutput;
 use crate::savegame::filesystem_ram_dumper::FilesystemRamDumper;
-use crate::screen::{ScreenBuffer, SdlScreen};
 
 use lib_gbemulation::apu::apu::Apu;
 
@@ -22,11 +17,13 @@ use crate::fps_checker::FpsChecker;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::time::Duration;
+use crate::graphics_window::GraphicsWindow;
 
 mod audio_output;
 mod fps_checker;
 mod savegame;
 mod screen;
+mod graphics_window;
 
 pub enum EmulationSignal {
     Cycle,
@@ -46,50 +43,12 @@ fn main() {
     let (emulation_signal_sender, emulation_signal_receiver) = channel();
 
     let audio_emulation_signal_sender = emulation_signal_sender.clone();
-    let mut audio_output = CpalAudioOutput::new(2048, Some(audio_emulation_signal_sender));
+    let window = Arc::new(GraphicsWindow::new(160,144));
 
-    let default_device = audio_output.get_default_device_name();
-    println!("Using audio device: {}", default_device);
+    let wind = Arc::clone(&window);
 
-    audio_output.start(default_device);
-
-    //TODO: This SDL stuff is just for testing purposes. In the future a better method is needed with some GUI stuff
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
-    let window = video_subsystem
-        .window(
-            "Gameboy Emulator",
-            SCREEN_WIDTH as u32 * SCALE as u32,
-            SCREEN_HEIGHT as u32 * SCALE as u32,
-        )
-        .position_centered()
-        .opengl()
-        .build()
-        .unwrap();
-
-    let canvas = window.into_canvas().present_vsync().build().unwrap();
-
-    let texture_creator = canvas.texture_creator();
-    let texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, 160, 144)
-        .unwrap();
-
-    let screen_buffer = Arc::new(ScreenBuffer::new());
-
-    let mut screen = SdlScreen::new(
-        canvas,
-        texture,
-        SCREEN_WIDTH as u16 * SCALE as u16,
-        SCREEN_HEIGHT as u16 * SCALE as u16,
-        &screen_buffer,
-    );
-
-    let mut event_pump = sdl_context.event_pump().unwrap();
-
-    let (event_sender, event_receiver) = channel();
+    //let (event_sender, event_receiver) = channel();
     let (error_sender, error_receiver) = channel();
-
-    let cloned_screen_buffer = Arc::clone(&screen_buffer);
 
     let rom = match fs::read(&rom_filename) {
         Ok(rom) => rom,
@@ -104,6 +63,15 @@ fn main() {
     thread::Builder::new()
         .name("emulation".to_string())
         .spawn(move || {
+            //Cpal needs to be startet from a different thread because of a winit bug on windows
+            let mut audio_output = CpalAudioOutput::new(2048, Some(audio_emulation_signal_sender));
+
+            let default_device = audio_output.get_default_device_name();
+            println!("Using audio device: {}", default_device);
+
+            audio_output.start(default_device);
+
+
             let mut joypad = Joypad::new();
 
             let mut cartridge = match cartridge::new_cartridge(rom, Some(Box::new(ram_dumper))) {
@@ -115,7 +83,7 @@ fn main() {
             };
 
             let mut apu = Apu::new(&mut audio_output);
-            let mut gpu = Gpu::new(cloned_screen_buffer);
+            let mut gpu = Gpu::new(wind);
             let mut mmu = Mmu::new(&mut *cartridge, &mut gpu, &mut apu);
             let mut cpu = Cpu::new();
             let mut emulation = Emulation::new();
@@ -128,110 +96,6 @@ fn main() {
                     break;
                 }
 
-                match event_receiver.try_recv() {
-                    //TODO: Make this configurable
-                    Ok(event) => match event {
-                        Event::KeyDown {
-                            keycode: Some(Keycode::D),
-                            ..
-                        } => {
-                            joypad.push_key(Key::Right);
-                        }
-                        Event::KeyUp {
-                            keycode: Some(Keycode::D),
-                            ..
-                        } => {
-                            joypad.release_key(Key::Right);
-                        }
-                        Event::KeyDown {
-                            keycode: Some(Keycode::A),
-                            ..
-                        } => {
-                            joypad.push_key(Key::Left);
-                        }
-                        Event::KeyUp {
-                            keycode: Some(Keycode::A),
-                            ..
-                        } => {
-                            joypad.release_key(Key::Left);
-                        }
-                        Event::KeyDown {
-                            keycode: Some(Keycode::S),
-                            ..
-                        } => {
-                            joypad.push_key(Key::Down);
-                        }
-                        Event::KeyUp {
-                            keycode: Some(Keycode::S),
-                            ..
-                        } => {
-                            joypad.release_key(Key::Down);
-                        }
-                        Event::KeyDown {
-                            keycode: Some(Keycode::W),
-                            ..
-                        } => {
-                            joypad.push_key(Key::Up);
-                        }
-                        Event::KeyUp {
-                            keycode: Some(Keycode::W),
-                            ..
-                        } => {
-                            joypad.release_key(Key::Up);
-                        }
-                        Event::KeyDown {
-                            keycode: Some(Keycode::Return),
-                            ..
-                        } => {
-                            joypad.push_key(Key::Start);
-                        }
-                        Event::KeyUp {
-                            keycode: Some(Keycode::Return),
-                            ..
-                        } => {
-                            joypad.release_key(Key::Start);
-                        }
-                        Event::KeyDown {
-                            keycode: Some(Keycode::LShift),
-                            ..
-                        } => {
-                            joypad.push_key(Key::B);
-                        }
-                        Event::KeyUp {
-                            keycode: Some(Keycode::LShift),
-                            ..
-                        } => {
-                            joypad.release_key(Key::B);
-                        }
-                        Event::KeyDown {
-                            keycode: Some(Keycode::Space),
-                            ..
-                        } => {
-                            joypad.push_key(Key::A);
-                        }
-                        Event::KeyUp {
-                            keycode: Some(Keycode::Space),
-                            ..
-                        } => {
-                            joypad.release_key(Key::A);
-                        }
-                        Event::KeyDown {
-                            keycode: Some(Keycode::K),
-                            ..
-                        } => {
-                            joypad.push_key(Key::Select);
-                        }
-                        Event::KeyUp {
-                            keycode: Some(Keycode::K),
-                            ..
-                        } => {
-                            joypad.release_key(Key::Select);
-                        }
-                        _ => {}
-                    },
-                    _ => {}
-                }
-
                 emulation.cycle(&mut cpu, &mut mmu, &mut joypad);
             }
         })
@@ -239,33 +103,25 @@ fn main() {
 
     let mut fps_checker = FpsChecker::new(300);
 
-    'video: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. } => {
-                    emulation_signal_sender.send(EmulationSignal::Quit).unwrap();
-                    break 'video;
-                }
-                Event::KeyDown { .. } | Event::KeyUp { .. } => {
-                    event_sender.send(event).unwrap();
-                }
-                _ => {}
-            }
-        }
+    window.start();
 
+    /* loop {
+         thread::sleep(Duration::from_secs_f32(1.0 / 60.0));
+     }*/
+
+    /*'video: loop {
         if let Ok(error_message) = error_receiver.try_recv() {
             eprintln!("{}", error_message);
             break;
         }
 
-        fps_checker.count_frame();
 
-        screen.present();
+        fps_checker.count_frame();
 
         if fps_checker.should_limit_frames() {
             thread::sleep(Duration::from_secs_f32(1.0 / 60.0));
         }
-    }
+    }*/
 
     println!("Bye");
 }
