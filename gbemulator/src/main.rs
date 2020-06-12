@@ -13,17 +13,16 @@ use lib_gbemulation::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use lib_gbemulation::io::joypad::{Joypad, Key};
 use lib_gbemulation::memory::mmu::Mmu;
 
-use crate::fps_checker::FpsChecker;
+use crate::graphics::window::GraphicsWindow;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::time::Duration;
-use crate::graphics_window::GraphicsWindow;
 
 mod audio_output;
-mod fps_checker;
+mod controls;
+mod graphics;
 mod savegame;
 mod screen;
-mod graphics_window;
 
 pub enum EmulationSignal {
     Cycle,
@@ -43,7 +42,7 @@ fn main() {
     let (emulation_signal_sender, emulation_signal_receiver) = channel();
 
     let audio_emulation_signal_sender = emulation_signal_sender.clone();
-    let window = Arc::new(GraphicsWindow::new(160,144));
+    let window = Arc::new(GraphicsWindow::new(160 * 3, 144 * 3));
 
     let wind = Arc::clone(&window);
 
@@ -70,7 +69,6 @@ fn main() {
             println!("Using audio device: {}", default_device);
 
             audio_output.start(default_device);
-
 
             let mut joypad = Joypad::new();
 
@@ -101,27 +99,5 @@ fn main() {
         })
         .unwrap();
 
-    let mut fps_checker = FpsChecker::new(300);
-
     window.start();
-
-    /* loop {
-         thread::sleep(Duration::from_secs_f32(1.0 / 60.0));
-     }*/
-
-    /*'video: loop {
-        if let Ok(error_message) = error_receiver.try_recv() {
-            eprintln!("{}", error_message);
-            break;
-        }
-
-
-        fps_checker.count_frame();
-
-        if fps_checker.should_limit_frames() {
-            thread::sleep(Duration::from_secs_f32(1.0 / 60.0));
-        }
-    }*/
-
-    println!("Bye");
 }

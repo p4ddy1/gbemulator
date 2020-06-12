@@ -5,5 +5,8 @@ members = [
     "gbemulator"
 ]
 
+[profile.release]
+debug=true
+
 [profile.dev]
 opt-level = 3
