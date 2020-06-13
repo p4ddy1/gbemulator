@@ -5,13 +5,13 @@ use std::io::ErrorKind;
 use std::sync::{Arc, RwLock};
 
 pub struct ConfigStorage {
-    pub config: RwLock<Config>,
+    pub config: Arc<RwLock<Config>>,
 }
 
 impl ConfigStorage {
     pub fn create_empty() -> Self {
         ConfigStorage {
-            config: RwLock::new(Config::default()),
+            config: Arc::new(RwLock::new(Config::default())),
         }
     }
 
@@ -35,7 +35,7 @@ impl ConfigStorage {
         };
 
         Ok(ConfigStorage {
-            config: RwLock::new(config),
+            config: Arc::new(RwLock::new(config)),
         })
     }
 

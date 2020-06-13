@@ -13,15 +13,15 @@ pub enum Type {
     Gamepad,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KeyboardMap {
     pub map: HashMap<VirtualKeyCode, Key>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Controls {
-    selected_type: Type,
-    keyboard_map: KeyboardMap,
+    pub selected_type: Type,
+    pub keyboard_map: KeyboardMap,
 }
 
 impl Default for Controls {

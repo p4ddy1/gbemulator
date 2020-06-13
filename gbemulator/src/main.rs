@@ -41,8 +41,6 @@ fn main() {
 
     let config_storage = ConfigStorage::create_from_file("gbemulator.toml").unwrap();
 
-    println!("{:?}", config_storage.config);
-
     let rom_filename = String::from(&args[1]);
 
     let (emulation_signal_sender, emulation_signal_receiver) = channel();
@@ -62,6 +60,8 @@ fn main() {
             process::exit(2);
         }
     };
+
+    let (keyboard_sender, keyboard_receiver) = controls::new_keyboard(&config_storage);
 
     let ram_dumper = FilesystemRamDumper::new(&rom_filename);
 
@@ -100,10 +100,12 @@ fn main() {
                     break;
                 }
 
+                keyboard_receiver.receive(&mut joypad);
+
                 emulation.cycle(&mut cpu, &mut mmu, &mut joypad);
             }
         })
         .unwrap();
 
-    window.start();
+    window.start(keyboard_sender);
 }

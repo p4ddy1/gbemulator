@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    controls: Controls,
+    pub controls: Controls,
 }
 
 impl Config {

@@ -9,6 +9,10 @@ use self::glium::texture::{
     UncompressedUintFormat,
 };
 use self::glium::{Rect, Surface};
+use crate::config::config::Config;
+use crate::config::config_storage::ConfigStorage;
+use crate::controls::keyboard_receiver::KeyboardReceiver;
+use crate::controls::keyboard_sender::KeyboardSender;
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
@@ -32,7 +36,7 @@ impl GraphicsWindow {
         }
     }
 
-    pub fn start(&self) {
+    pub fn start(&self, keyboard_sender: KeyboardSender) {
         let event_loop = glutin::event_loop::EventLoop::new();
 
         let size: glutin::dpi::LogicalSize<u32> = (self.width, self.height).into();
@@ -57,7 +61,16 @@ impl GraphicsWindow {
                     return;
                 }
                 glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                    println!("{:?}", input.virtual_keycode.unwrap());
+                    if let Some(keycode) = input.virtual_keycode {
+                        match input.state {
+                            winit::event::ElementState::Pressed => {
+                                keyboard_sender.press_key(keycode)
+                            }
+                            winit::event::ElementState::Released => {
+                                keyboard_sender.release_key(keycode)
+                            }
+                        }
+                    }
                 }
                 _ => {}
             },
