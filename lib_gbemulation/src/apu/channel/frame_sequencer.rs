@@ -47,6 +47,12 @@ impl FrameSequencer {
             clock_cycles,
         );
     }
+
+    pub fn reset(&mut self) {
+        self.volume_envelope_timer = 0;
+        self.length_counter_timer = 0;
+        self.sweep_timer = 0;
+    }
 }
 
 fn cycle_timer(timer: &mut u32, limit: u32, trigger: &mut bool, clock_cycles: u8) {
