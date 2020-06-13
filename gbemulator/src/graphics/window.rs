@@ -40,7 +40,8 @@ impl GraphicsWindow {
             .with_title("GBemulator")
             .with_inner_size(size);
         let context_builder = glutin::ContextBuilder::new()
-            .with_gl(Specific(Api::OpenGl, (3, 1))) //We dont need the latest version
+            //We dont need the latest version
+            .with_gl(Specific(Api::OpenGl, (3, 1)))
             .with_vsync(true);
 
         let display = glium::Display::new(window_builder, context_builder, &event_loop).unwrap();
@@ -54,6 +55,9 @@ impl GraphicsWindow {
                 glutin::event::WindowEvent::CloseRequested => {
                     *control_flow = glutin::event_loop::ControlFlow::Exit;
                     return;
+                }
+                glutin::event::WindowEvent::KeyboardInput { input, .. } => {
+                    println!("{:?}", input.virtual_keycode.unwrap());
                 }
                 _ => {}
             },

@@ -13,12 +13,14 @@ use lib_gbemulation::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use lib_gbemulation::io::joypad::{Joypad, Key};
 use lib_gbemulation::memory::mmu::Mmu;
 
+use crate::config::config_storage::ConfigStorage;
 use crate::graphics::window::GraphicsWindow;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::time::Duration;
 
 mod audio_output;
+mod config;
 mod controls;
 mod graphics;
 mod savegame;
@@ -36,6 +38,10 @@ fn main() {
         println!("Usage: gbemulator rom.gb");
         process::exit(1);
     }
+
+    let config_storage = ConfigStorage::create_from_file("gbemulator.toml").unwrap();
+
+    println!("{:?}", config_storage.config);
 
     let rom_filename = String::from(&args[1]);
 

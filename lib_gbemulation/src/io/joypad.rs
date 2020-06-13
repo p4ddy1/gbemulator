@@ -1,5 +1,9 @@
 use crate::util::binary::is_bit_set;
+#[cfg(feature = "serialize")]
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Eq, PartialEq, Hash, Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize, Deserialize))]
 pub enum Key {
     A,
     B,
