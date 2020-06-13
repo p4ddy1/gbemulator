@@ -5,6 +5,7 @@ use crate::apu::channel::wave_channel::WaveChannel;
 use crate::apu::mixer::Mixer;
 use crate::apu::{AudioOutput, Channel};
 use crate::emulation::CPU_CLOCK_HZ;
+use crate::util::binary::is_bit_set;
 
 const SQUARE_CHANNEL_1_START_ADDRESS: u16 = 0xFF10;
 const SQUARE_CHANNEL_1_END_ADDRESS: u16 = 0xFF14;
@@ -25,6 +26,7 @@ pub struct Apu<'a> {
     mixer: Mixer,
     clock: u16,
     output_step: u16,
+    enbaled: bool
 }
 
 impl<'a> Apu<'a> {
@@ -40,23 +42,29 @@ impl<'a> Apu<'a> {
             mixer: Mixer::new(),
             clock: 0,
             output_step: output_step,
+            enbaled: false
         }
     }
 
     pub fn step(&mut self, clock_cycles: u8) {
         self.clock += clock_cycles as u16;
-        self.frame_sequencer.step(clock_cycles);
 
-        self.square_channel1
-            .step(&self.frame_sequencer, clock_cycles);
-        self.square_channel2
-            .step(&self.frame_sequencer, clock_cycles);
-        self.wave_channel.step(&self.frame_sequencer, clock_cycles);
-        self.noise_channel.step(&self.frame_sequencer, clock_cycles);
+        if self.enbaled {
+            self.frame_sequencer.step(clock_cycles);
+
+            self.square_channel1
+                .step(&self.frame_sequencer, clock_cycles);
+            self.square_channel2
+                .step(&self.frame_sequencer, clock_cycles);
+            self.wave_channel.step(&self.frame_sequencer, clock_cycles);
+            self.noise_channel.step(&self.frame_sequencer, clock_cycles);
+        }
+
 
         //TODO: Do downsampling in a different way because this causes bad quality
         while self.clock >= self.output_step {
             let (output_left, output_right) = self.mixer.mix(
+                self.enbaled,
                 &self.square_channel1,
                 &self.square_channel2,
                 &self.wave_channel,
@@ -82,7 +90,13 @@ impl<'a> Apu<'a> {
             NOISE_CHANNEL_START_ADDRESS..=NOISE_CHANNEL_END_ADDRESS => {
                 self.noise_channel.write(address, value)
             }
-            0xFF24..=0xFF26 => self.mixer.write(address, value),
+            0xFF24..=0xFF25 => self.mixer.write(address, value),
+            0xFF26 => {
+                self.enbaled = is_bit_set(&value, 7);
+                if self.enbaled {
+                    self.frame_sequencer.reset();
+                }
+            }
             0xFF30..=0xFF3F => self.wave_channel.write_wavetable(address, value),
             _ => {}
         }

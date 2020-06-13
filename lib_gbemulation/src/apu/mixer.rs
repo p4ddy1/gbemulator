@@ -32,6 +32,7 @@ impl Mixer {
 
     pub fn mix(
         &self,
+        enabled: bool,
         square_channel1: &SquareChannel,
         square_channel2: &SquareChannel,
         wave_channel: &WaveChannel,
@@ -39,6 +40,10 @@ impl Mixer {
     ) -> (i16, i16) {
         let mut output_left = 0;
         let mut output_right = 0;
+
+        if !enabled {
+            return (output_left, output_right);
+        }
 
         mix_channel(
             &mut output_left,
