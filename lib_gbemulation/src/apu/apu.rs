@@ -26,7 +26,7 @@ pub struct Apu<'a> {
     mixer: Mixer,
     clock: u16,
     output_step: u16,
-    enbaled: bool
+    enbaled: bool,
 }
 
 impl<'a> Apu<'a> {
@@ -42,7 +42,7 @@ impl<'a> Apu<'a> {
             mixer: Mixer::new(),
             clock: 0,
             output_step: output_step,
-            enbaled: false
+            enbaled: false,
         }
     }
 
@@ -59,7 +59,6 @@ impl<'a> Apu<'a> {
             self.wave_channel.step(&self.frame_sequencer, clock_cycles);
             self.noise_channel.step(&self.frame_sequencer, clock_cycles);
         }
-
 
         //TODO: Do downsampling in a different way because this causes bad quality
         while self.clock >= self.output_step {

@@ -1,10 +1,10 @@
+use crate::config::config::Config;
 use crate::config::config_storage::ConfigStorage;
 use crate::config::controls::KeyboardMap;
 use crate::controls::KeyEvent;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, RwLock};
 use winit::event::VirtualKeyCode;
-use crate::config::config::Config;
 
 pub struct KeyboardSender {
     sender: Sender<KeyEvent>,

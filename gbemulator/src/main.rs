@@ -18,6 +18,7 @@ use crate::graphics::window::GraphicsWindow;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::time::Duration;
+use crate::graphics::gameboy_screen::GameboyScreen;
 
 mod audio_output;
 mod config;
@@ -46,9 +47,11 @@ fn main() {
     let (emulation_signal_sender, emulation_signal_receiver) = channel();
 
     let audio_emulation_signal_sender = emulation_signal_sender.clone();
-    let window = Arc::new(GraphicsWindow::new(160 * 3, 144 * 3));
 
-    let wind = Arc::clone(&window);
+    let gameboy_screen = Arc::new(GameboyScreen::new());
+    let cloned_screen = Arc::clone(&gameboy_screen);
+
+    let window = GraphicsWindow::new(160 * 3, 144 * 3);
 
     //let (event_sender, event_receiver) = channel();
     let (error_sender, error_receiver) = channel();
@@ -87,7 +90,7 @@ fn main() {
             };
 
             let mut apu = Apu::new(&mut audio_output);
-            let mut gpu = Gpu::new(wind);
+            let mut gpu = Gpu::new(cloned_screen);
             let mut mmu = Mmu::new(&mut *cartridge, &mut gpu, &mut apu);
             let mut cpu = Cpu::new();
             let mut emulation = Emulation::new();
@@ -107,7 +110,7 @@ fn main() {
         })
         .unwrap();
 
-    window.start(keyboard_sender);
+    window.start(keyboard_sender, gameboy_screen);
     emulation_signal_sender.send(EmulationSignal::Quit).unwrap();
     emulation_thread.join();
 }
