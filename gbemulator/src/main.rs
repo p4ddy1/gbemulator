@@ -65,7 +65,7 @@ fn main() {
 
     let ram_dumper = FilesystemRamDumper::new(&rom_filename);
 
-    thread::Builder::new()
+    let emulation_thread = thread::Builder::new()
         .name("emulation".to_string())
         .spawn(move || {
             //Cpal needs to be startet from a different thread because of a winit bug on windows
@@ -108,4 +108,6 @@ fn main() {
         .unwrap();
 
     window.start(keyboard_sender);
+    emulation_signal_sender.send(EmulationSignal::Quit).unwrap();
+    emulation_thread.join();
 }
