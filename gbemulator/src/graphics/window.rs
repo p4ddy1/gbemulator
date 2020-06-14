@@ -13,10 +13,20 @@ use crate::config::config::Config;
 use crate::config::config_storage::ConfigStorage;
 use crate::controls::keyboard_receiver::KeyboardReceiver;
 use crate::controls::keyboard_sender::KeyboardSender;
+use crate::graphics::gameboy_screen::GameboyScreen;
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
-use crate::graphics::gameboy_screen::GameboyScreen;
+use winit::event::KeyboardInput;
+use imgui_winit_support::{WinitPlatform, HiDpiMode};
+use imgui_glium_renderer::Renderer;
+use self::glium::Surface;
+use imgui::{Window, Condition, Image, ItemFlag, BackendFlags};
+use imgui::im_str;
+use glium::Texture2d;
+use std::rc::Rc;
+use self::glium::framebuffer::SimpleFrameBuffer;
+use self::glium::texture::pixel_buffer::PixelBuffer;
 
 pub struct GraphicsWindow {
     width: u32,
@@ -45,32 +55,77 @@ impl GraphicsWindow {
 
         let display = glium::Display::new(window_builder, context_builder, &event_loop).unwrap();
 
-        event_loop.run(move |event, _, control_flow| match event {
-            glutin::event::Event::WindowEvent { event, .. } => match event {
-                glutin::event::WindowEvent::CloseRequested => {
-                    *control_flow = glutin::event_loop::ControlFlow::Exit;
-                    return;
-                }
-                glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                    if let Some(keycode) = input.virtual_keycode {
-                        match input.state {
-                            winit::event::ElementState::Pressed => {
-                                keyboard_sender.press_key(keycode)
-                            }
-                            winit::event::ElementState::Released => {
-                                keyboard_sender.release_key(keycode)
-                            }
-                        }
+        let mut imgui = imgui::Context::create();
+        imgui.set_ini_filename(None);
+
+        let mut platform = WinitPlatform::init(&mut imgui);
+        platform.attach_window(imgui.io_mut(), &display.gl_window().window(), HiDpiMode::Rounded);
+
+        let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
+
+        let gameboy_screen_texture = Rc::new(Texture2d::empty_with_format(
+            &display,
+            UncompressedFloatFormat::U8U8U8,
+            MipmapsOption::NoMipmap,
+            SCREEN_WIDTH as u32,
+            SCREEN_HEIGHT as u32,
+        ).unwrap());
+
+        let gameboy_screen_texture_id = renderer.textures().insert(Rc::clone(&gameboy_screen_texture));
+
+        event_loop.run(move |event, _, control_flow| {
+            //Imgui also needs to handle events
+            platform.handle_event(imgui.io_mut(), display.gl_window().window(), &event);
+
+            match event {
+                glutin::event::Event::WindowEvent { event, .. } => match event {
+                    glutin::event::WindowEvent::CloseRequested => {
+                        *control_flow = glutin::event_loop::ControlFlow::Exit;
+                        return;
                     }
-                }
+                    glutin::event::WindowEvent::KeyboardInput { input, .. } => {
+                        handle_inputs(&keyboard_sender, &input)
+                    }
+                    _ => {}
+                },
+                glutin::event::Event::MainEventsCleared => {
+                    let gl_window = display.gl_window();
+                    platform.prepare_frame(imgui.io_mut(), &gl_window.window());
+
+                    let mut ui = imgui.frame();
+
+
+                    gameboy_screen.draw_to_texture(&gameboy_screen_texture);
+
+                    Window::new(im_str!("Output"))
+                        .size([190.0, 174.0], Condition::FirstUseEver)
+                        .scroll_bar(false)
+                        .build(&ui, || {
+                            let width = ui.window_size()[0];
+                            let height = ui.window_size()[1];
+                            Image::new(gameboy_screen_texture_id, [width - 30.0, height - 30.0]).build(&ui);
+                        });
+
+                    let mut target = display.draw();
+                    target.clear_color(0.0, 0.0, 0.0, 0.0);
+
+                    platform.prepare_render(&ui, gl_window.window());
+                    let draw_data = ui.render();
+                    renderer.render(&mut target, draw_data).unwrap();
+
+                    target.finish().unwrap();
+                },
                 _ => {}
-            },
-            glutin::event::Event::MainEventsCleared => {
-                let mut frame = display.draw();
-                gameboy_screen.draw_to_frame(&display, &mut frame);
-                frame.finish().unwrap();
             }
-            _ => {}
         });
+    }
+}
+
+fn handle_inputs(keyboard_sender: &KeyboardSender, input: &KeyboardInput) {
+    if let Some(keycode) = input.virtual_keycode {
+        match input.state {
+            winit::event::ElementState::Pressed => keyboard_sender.press_key(keycode),
+            winit::event::ElementState::Released => keyboard_sender.release_key(keycode),
+        }
     }
 }

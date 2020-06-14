@@ -14,11 +14,11 @@ use lib_gbemulation::io::joypad::{Joypad, Key};
 use lib_gbemulation::memory::mmu::Mmu;
 
 use crate::config::config_storage::ConfigStorage;
+use crate::graphics::gameboy_screen::GameboyScreen;
 use crate::graphics::window::GraphicsWindow;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::time::Duration;
-use crate::graphics::gameboy_screen::GameboyScreen;
 
 mod audio_output;
 mod config;
