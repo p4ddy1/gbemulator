@@ -1,15 +1,14 @@
 use glium::backend::Facade;
 use glium::texture::{MipmapsOption, RawImage2d, UncompressedFloatFormat};
-use glium::{Frame, Surface, Texture2d, Rect};
+use glium::{Frame, Surface};
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
-use std::rc::Rc;
 
 pub struct GameboyScreen {
     buffer1: Arc<Mutex<[u8; BUFFER_SIZE]>>,
     buffer2: Arc<Mutex<[u8; BUFFER_SIZE]>>,
-    current_buffer: Arc<AtomicU8>
+    current_buffer: Arc<AtomicU8>,
 }
 
 impl GameboyScreen {
@@ -21,7 +20,7 @@ impl GameboyScreen {
         }
     }
 
-    pub fn draw_to_texture(&self, texture: &Rc<Texture2d>) {
+    pub fn draw_to_frame(&self, facade: &dyn Facade, frame: &mut Frame) {
         let current_buffer = self.current_buffer.load(Ordering::SeqCst);
 
         let data = *if current_buffer == 1 {
@@ -31,12 +30,19 @@ impl GameboyScreen {
         };
 
         let screen =
-            RawImage2d::from_raw_rgb(data.to_vec(), (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
+            RawImage2d::from_raw_rgb_reversed(&data, (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
 
-        texture.write(
-            Rect {left: 0, bottom: 0, width: SCREEN_WIDTH as u32, height: SCREEN_HEIGHT as u32},
-            screen
-        );
+        let texture = glium::texture::Texture2d::with_format(
+            facade,
+            screen,
+            UncompressedFloatFormat::U8U8U8,
+            MipmapsOption::NoMipmap,
+        )
+        .unwrap();
+
+        texture
+            .as_surface()
+            .fill(frame, glium::uniforms::MagnifySamplerFilter::Nearest);
     }
 }
 

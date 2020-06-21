@@ -9,24 +9,25 @@ use self::glium::texture::{
     UncompressedUintFormat,
 };
 
+use self::glium::framebuffer::SimpleFrameBuffer;
+use self::glium::texture::pixel_buffer::PixelBuffer;
+use self::glium::Surface;
 use crate::config::config::Config;
 use crate::config::config_storage::ConfigStorage;
 use crate::controls::keyboard_receiver::KeyboardReceiver;
 use crate::controls::keyboard_sender::KeyboardSender;
 use crate::graphics::gameboy_screen::GameboyScreen;
+use crate::graphics::gui::Gui;
+use glium::Texture2d;
+use imgui::{BackendFlags, Condition, Image, ItemFlag, Window};
+use imgui_glium_renderer::Renderer;
+use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use winit::event::KeyboardInput;
-use imgui_winit_support::{WinitPlatform, HiDpiMode};
-use imgui_glium_renderer::Renderer;
-use self::glium::Surface;
-use imgui::{Window, Condition, Image, ItemFlag, BackendFlags};
-use imgui::im_str;
-use glium::Texture2d;
-use std::rc::Rc;
-use self::glium::framebuffer::SimpleFrameBuffer;
-use self::glium::texture::pixel_buffer::PixelBuffer;
 
 pub struct GraphicsWindow {
     width: u32,
@@ -41,7 +42,12 @@ impl GraphicsWindow {
         }
     }
 
-    pub fn start(&self, keyboard_sender: KeyboardSender, gameboy_screen: Arc<GameboyScreen>) {
+    pub fn start(
+        &self,
+        keyboard_sender: KeyboardSender,
+        gameboy_screen: Arc<GameboyScreen>,
+        mut gui: Gui,
+    ) {
         let event_loop = glutin::event_loop::EventLoop::new();
 
         let size: glutin::dpi::LogicalSize<u32> = (self.width, self.height).into();
@@ -59,19 +65,13 @@ impl GraphicsWindow {
         imgui.set_ini_filename(None);
 
         let mut platform = WinitPlatform::init(&mut imgui);
-        platform.attach_window(imgui.io_mut(), &display.gl_window().window(), HiDpiMode::Rounded);
+        platform.attach_window(
+            imgui.io_mut(),
+            &display.gl_window().window(),
+            HiDpiMode::Rounded,
+        );
 
         let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
-
-        let gameboy_screen_texture = Rc::new(Texture2d::empty_with_format(
-            &display,
-            UncompressedFloatFormat::U8U8U8,
-            MipmapsOption::NoMipmap,
-            SCREEN_WIDTH as u32,
-            SCREEN_HEIGHT as u32,
-        ).unwrap());
-
-        let gameboy_screen_texture_id = renderer.textures().insert(Rc::clone(&gameboy_screen_texture));
 
         event_loop.run(move |event, _, control_flow| {
             //Imgui also needs to handle events
@@ -84,6 +84,7 @@ impl GraphicsWindow {
                         return;
                     }
                     glutin::event::WindowEvent::KeyboardInput { input, .. } => {
+                        gui.set_keyboard_input(input);
                         handle_inputs(&keyboard_sender, &input)
                     }
                     _ => {}
@@ -94,27 +95,18 @@ impl GraphicsWindow {
 
                     let mut ui = imgui.frame();
 
-
-                    gameboy_screen.draw_to_texture(&gameboy_screen_texture);
-
-                    Window::new(im_str!("Output"))
-                        .size([190.0, 174.0], Condition::FirstUseEver)
-                        .scroll_bar(false)
-                        .build(&ui, || {
-                            let width = ui.window_size()[0];
-                            let height = ui.window_size()[1];
-                            Image::new(gameboy_screen_texture_id, [width - 30.0, height - 30.0]).build(&ui);
-                        });
+                    gui.render(&mut ui);
 
                     let mut target = display.draw();
-                    target.clear_color(0.0, 0.0, 0.0, 0.0);
+
+                    gameboy_screen.draw_to_frame(&display, &mut target);
 
                     platform.prepare_render(&ui, gl_window.window());
                     let draw_data = ui.render();
                     renderer.render(&mut target, draw_data).unwrap();
 
                     target.finish().unwrap();
-                },
+                }
                 _ => {}
             }
         });

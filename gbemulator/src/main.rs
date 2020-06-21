@@ -15,6 +15,7 @@ use lib_gbemulation::memory::mmu::Mmu;
 
 use crate::config::config_storage::ConfigStorage;
 use crate::graphics::gameboy_screen::GameboyScreen;
+use crate::graphics::gui::Gui;
 use crate::graphics::window::GraphicsWindow;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
@@ -110,7 +111,9 @@ fn main() {
         })
         .unwrap();
 
-    window.start(keyboard_sender, gameboy_screen);
+    let mut gui = Gui::new(Arc::clone(&config_storage.config));
+
+    window.start(keyboard_sender, gameboy_screen, gui);
     emulation_signal_sender.send(EmulationSignal::Quit).unwrap();
     emulation_thread.join();
 }

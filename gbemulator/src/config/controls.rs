@@ -18,6 +18,27 @@ pub struct KeyboardMap {
     pub map: HashMap<VirtualKeyCode, Key>,
 }
 
+impl KeyboardMap {
+    pub fn get_key_code_by_key(&self, key: Key) -> &VirtualKeyCode {
+        self.map
+            .iter()
+            .find(|(_, gameboy_key)| **gameboy_key == key)
+            .unwrap()
+            .0
+    }
+
+    pub fn set_key_code_by_key(&mut self, key: Key, key_code: &VirtualKeyCode) {
+        let old = *self
+            .map
+            .iter()
+            .find(|(_, gameboy_key)| **gameboy_key == key)
+            .unwrap()
+            .0;
+        self.map.remove_entry(&old);
+        self.map.insert(*key_code, key);
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Controls {
     pub selected_type: Type,
@@ -98,6 +119,7 @@ impl<'de> Visitor<'de> for KeyboardMapVisitor {
     }
 }
 
+// This map is used for displaying a string as key in the config file
 fn create_key_to_string_map() -> HashMap<Key, String> {
     let mut map = HashMap::new();
     map.insert(Key::A, "A".to_string());
