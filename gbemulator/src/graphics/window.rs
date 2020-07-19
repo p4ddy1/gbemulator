@@ -28,6 +28,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use winit::event::KeyboardInput;
+use winit::platform::desktop::EventLoopExtDesktop;
 
 pub struct GraphicsWindow {
     width: u32,
@@ -48,7 +49,7 @@ impl GraphicsWindow {
         gameboy_screen: Arc<GameboyScreen>,
         mut gui: Gui,
     ) {
-        let event_loop = glutin::event_loop::EventLoop::new();
+        let mut event_loop = glutin::event_loop::EventLoop::new();
 
         let size: glutin::dpi::LogicalSize<u32> = (self.width, self.height).into();
         let window_builder = glutin::window::WindowBuilder::new()
@@ -73,7 +74,7 @@ impl GraphicsWindow {
 
         let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
 
-        event_loop.run(move |event, _, control_flow| {
+        event_loop.run_return(move |event, _, control_flow| {
             //Imgui also needs to handle events
             platform.handle_event(imgui.io_mut(), display.gl_window().window(), &event);
 

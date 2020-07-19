@@ -41,7 +41,7 @@ fn main() {
         process::exit(1);
     }
 
-    let config_storage = ConfigStorage::create_from_file("gbemulator.toml").unwrap();
+    let config_storage = ConfigStorage::create_from_file("gbemulator.toml".to_string()).unwrap();
 
     let rom_filename = String::from(&args[1]);
 
@@ -116,4 +116,6 @@ fn main() {
     window.start(keyboard_sender, gameboy_screen, gui);
     emulation_signal_sender.send(EmulationSignal::Quit).unwrap();
     emulation_thread.join();
+
+    config_storage.save_to_file();
 }

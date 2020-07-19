@@ -21,15 +21,19 @@ impl KeyboardSender {
 
     pub fn press_key(&self, key_code: VirtualKeyCode) {
         let config = self.config.read().unwrap();
-        if let Some(key) = config.controls.keyboard_map.map.get(&key_code) {
-            self.sender.send(KeyEvent::KeyPressed(key.clone()));
+        if let Some(key_list) = config.controls.keyboard_map.map.get(&key_code) {
+            for key in key_list {
+                self.sender.send(KeyEvent::KeyPressed(key.clone()));
+            }
         }
     }
 
     pub fn release_key(&self, key_code: VirtualKeyCode) {
         let config = self.config.read().unwrap();
-        if let Some(key) = config.controls.keyboard_map.map.get(&key_code) {
-            self.sender.send(KeyEvent::KeyReleased(key.clone()));
+        if let Some(key_list) = config.controls.keyboard_map.map.get(&key_code) {
+            for key in key_list {
+                self.sender.send(KeyEvent::KeyReleased(key.clone()));
+            }
         }
     }
 }
