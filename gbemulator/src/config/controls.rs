@@ -104,8 +104,7 @@ impl Serialize for KeyboardMap {
         }
 
         for (gameboy_key_string, keyboard_key_list) in key_to_keycode_map {
-            map.serialize_entry(&gameboy_key_string, &keyboard_key_list)
-                .unwrap_err();
+            map.serialize_entry(&gameboy_key_string, &keyboard_key_list).unwrap();
         }
 
         map.end()
