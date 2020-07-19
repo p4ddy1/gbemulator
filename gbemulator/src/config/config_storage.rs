@@ -1,5 +1,5 @@
 use crate::config::config::Config;
-use std::error::Error;
+
 use std::fs;
 use std::io::ErrorKind;
 use std::sync::{Arc, RwLock};

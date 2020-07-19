@@ -9,8 +9,8 @@ use lib_gbemulation::cartridge;
 use lib_gbemulation::cpu::cpu::Cpu;
 use lib_gbemulation::emulation::Emulation;
 use lib_gbemulation::gpu::gpu::Gpu;
-use lib_gbemulation::gpu::{SCALE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use lib_gbemulation::io::joypad::{Joypad, Key};
+
+use lib_gbemulation::io::joypad::Joypad;
 use lib_gbemulation::memory::mmu::Mmu;
 
 use crate::config::config_storage::ConfigStorage;
@@ -19,7 +19,6 @@ use crate::graphics::gui::Gui;
 use crate::graphics::window::GraphicsWindow;
 use std::sync::mpsc::channel;
 use std::sync::Arc;
-use std::time::Duration;
 
 mod audio_output;
 mod config;
@@ -55,7 +54,7 @@ fn main() {
     let window = GraphicsWindow::new(160 * 3, 144 * 3);
 
     //let (event_sender, event_receiver) = channel();
-    let (error_sender, error_receiver) = channel();
+    let (error_sender, _error_receiver) = channel();
 
     let rom = match fs::read(&rom_filename) {
         Ok(rom) => rom,
@@ -111,11 +110,11 @@ fn main() {
         })
         .unwrap();
 
-    let mut gui = Gui::new(Arc::clone(&config_storage.config));
+    let gui = Gui::new(Arc::clone(&config_storage.config));
 
     window.start(keyboard_sender, gameboy_screen, gui);
     emulation_signal_sender.send(EmulationSignal::Quit).unwrap();
-    emulation_thread.join();
+    emulation_thread.join().unwrap();
 
-    config_storage.save_to_file();
+    config_storage.save_to_file().unwrap();
 }

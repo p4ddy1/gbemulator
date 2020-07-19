@@ -38,7 +38,7 @@ impl KeyboardMap {
             return;
         }
 
-        let mut key_list = self.map.get_mut(key_code).unwrap();
+        let key_list = self.map.get_mut(key_code).unwrap();
         if !key_list.contains(&key) {
             key_list.push(key);
         }
@@ -104,7 +104,8 @@ impl Serialize for KeyboardMap {
         }
 
         for (gameboy_key_string, keyboard_key_list) in key_to_keycode_map {
-            map.serialize_entry(&gameboy_key_string, &keyboard_key_list);
+            map.serialize_entry(&gameboy_key_string, &keyboard_key_list)
+                .unwrap_err();
         }
 
         map.end()

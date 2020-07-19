@@ -1,7 +1,3 @@
-use lib_gbemulation::gpu::{Screen, SCREEN_HEIGHT, SCREEN_WIDTH};
-
-use std::sync::Mutex;
-
 /*
 pub struct ScreenBuffer {
     pub buffer1: Mutex<[u8; (SCREEN_WIDTH * SCREEN_WIDTH * 3) + SCREEN_HEIGHT * 3]>,

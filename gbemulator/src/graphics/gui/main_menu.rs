@@ -1,5 +1,5 @@
 use crate::graphics::gui::{State, UiElement};
-use imgui::{im_str, Io, MenuItem, Ui};
+use imgui::{im_str, MenuItem, Ui};
 use winit::event::KeyboardInput;
 
 pub struct MainMenu {}

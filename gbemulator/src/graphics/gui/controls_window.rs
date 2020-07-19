@@ -1,12 +1,12 @@
 use crate::config::config::Config;
 use crate::config::controls::KeyboardMap;
 use crate::graphics::gui::{State, UiElement};
-use imgui::StyleColor::Button;
-use imgui::{im_str, Condition, ImGuiInputTextFlags, ImStr, ImString, InputText, Ui, Window};
+
+use imgui::{im_str, Condition, ImString, Ui, Window};
 use lib_gbemulation::io::joypad::Key;
 use serde::export::Option::Some;
 use std::sync::{Arc, RwLock};
-use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
+use winit::event::{ElementState, KeyboardInput};
 
 pub struct ControlsWindow {
     config: Arc<RwLock<Config>>,

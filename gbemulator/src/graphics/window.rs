@@ -2,31 +2,18 @@ extern crate glium;
 
 use glium::glutin;
 
+use self::glium::backend::glutin::glutin::Api;
 use self::glium::backend::glutin::glutin::GlRequest::Specific;
-use self::glium::backend::glutin::glutin::{Api, GlProfile, GlRequest};
-use self::glium::texture::{
-    MipmapsOption, RawImage2d, UncompressedFloatFormat, UncompressedIntFormat,
-    UncompressedUintFormat,
-};
 
-use self::glium::framebuffer::SimpleFrameBuffer;
-use self::glium::texture::pixel_buffer::PixelBuffer;
-use self::glium::Surface;
-use crate::config::config::Config;
-use crate::config::config_storage::ConfigStorage;
-use crate::controls::keyboard_receiver::KeyboardReceiver;
 use crate::controls::keyboard_sender::KeyboardSender;
 use crate::graphics::gameboy_screen::GameboyScreen;
 use crate::graphics::gui::Gui;
-use glium::Texture2d;
-use imgui::{BackendFlags, Condition, Image, ItemFlag, Window};
+
 use imgui_glium_renderer::Renderer;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
-use std::rc::Rc;
-use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::Instant;
+
+use std::sync::Arc;
+
 use winit::event::KeyboardInput;
 use winit::platform::desktop::EventLoopExtDesktop;
 
@@ -92,7 +79,9 @@ impl GraphicsWindow {
                 },
                 glutin::event::Event::MainEventsCleared => {
                     let gl_window = display.gl_window();
-                    platform.prepare_frame(imgui.io_mut(), &gl_window.window());
+                    platform
+                        .prepare_frame(imgui.io_mut(), &gl_window.window())
+                        .unwrap();
 
                     let mut ui = imgui.frame();
 

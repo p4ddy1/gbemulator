@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 
+#[allow(dead_code)]
 pub struct FpsChecker {
     pub fps_bound: u16,
     pub average_frames: u16,
@@ -11,6 +12,7 @@ pub struct FpsChecker {
 }
 
 impl FpsChecker {
+    #[allow(dead_code)]
     pub fn new(fps_bound: u16) -> Self {
         FpsChecker {
             frame_counter: 0,
@@ -23,6 +25,7 @@ impl FpsChecker {
         }
     }
 
+    #[allow(dead_code)]
     pub fn count_frame(&mut self) {
         if !self.active {
             return;
@@ -46,6 +49,7 @@ impl FpsChecker {
         }
     }
 
+    #[allow(dead_code)]
     pub fn should_limit_frames(&self) -> bool {
         if self.active {
             return false;

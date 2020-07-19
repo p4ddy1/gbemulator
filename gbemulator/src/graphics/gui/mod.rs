@@ -1,7 +1,7 @@
 use crate::config::config::Config;
 use crate::graphics::gui::controls_window::ControlsWindow;
 use crate::graphics::gui::main_menu::MainMenu;
-use imgui::{Io, Ui};
+use imgui::Ui;
 use std::sync::{Arc, RwLock};
 use winit::event::KeyboardInput;
 
@@ -15,7 +15,7 @@ pub struct Gui {
     keyboard_input: Option<KeyboardInput>,
 }
 
-struct State {
+pub struct State {
     controls_window_shown: bool,
 }
 
