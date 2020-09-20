@@ -165,10 +165,10 @@ impl UiElement for ControlsWindow {
                     ui.next_column();
                     ui.set_column_width(1, 50.0);
 
-                    create_clear_button(&self.config, ui, &mut self.text_input_a, Key::B);
-                    create_clear_button(&self.config, ui, &mut self.text_input_up, Key::Down);
-                    create_clear_button(&self.config, ui, &mut self.text_input_left, Key::Right);
-                    create_clear_button(&self.config, ui, &mut self.text_input_start, Key::Select);
+                    create_clear_button(&self.config, ui, &mut self.text_input_b, Key::B);
+                    create_clear_button(&self.config, ui, &mut self.text_input_down, Key::Down);
+                    create_clear_button(&self.config, ui, &mut self.text_input_right, Key::Right);
+                    create_clear_button(&self.config, ui, &mut self.text_input_select, Key::Select);
                 });
         }
     }

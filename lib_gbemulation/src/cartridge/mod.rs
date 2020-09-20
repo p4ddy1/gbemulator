@@ -28,8 +28,8 @@ pub trait RamDumper {
 
 pub fn new_cartridge(
     rom: Vec<u8>,
-    ram_dumper: Option<Box<dyn RamDumper>>,
-) -> Result<Box<dyn Cartridge>, String> {
+    ram_dumper: Option<Box<dyn RamDumper + Send>>,
+) -> Result<Box<dyn Cartridge + Send>, String> {
     let cartridge_type = rom[CARTRIDGE_TYPE_ADDRESS];
     match cartridge_type {
         0x00 | 0x08..=0x09 => Ok(Box::new(RomOnlyCartridge::new(rom, ram_dumper))),

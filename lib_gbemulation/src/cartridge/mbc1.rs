@@ -12,7 +12,7 @@ pub struct Mbc1 {
 }
 
 impl Mbc1 {
-    pub fn new(rom: Vec<u8>, ram_dumper: Option<Box<dyn RamDumper>>) -> Self {
+    pub fn new(rom: Vec<u8>, ram_dumper: Option<Box<dyn RamDumper + Send>>) -> Self {
         let cartridge_type = rom[CARTRIDGE_TYPE_ADDRESS];
         let has_ram = cartridge_type == 0x02 || cartridge_type == 0x03;
         let has_battery = cartridge_type == 0x03;

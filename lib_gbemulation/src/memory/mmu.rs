@@ -54,7 +54,7 @@ impl<'a> Mmu<'a> {
         }
     }
 
-    pub fn step(&mut self, joypad: &mut Joypad, clock_cycles: u8) {
+    pub fn step(&mut self, joypad: &Joypad, clock_cycles: u8) {
         self.read_joypad(joypad);
         self.gpu.step(clock_cycles);
         self.timer.step(clock_cycles);
@@ -69,9 +69,8 @@ impl<'a> Mmu<'a> {
         self.cartridge.dump_savegame();
     }
 
-    fn read_joypad(&mut self, joypad: &mut Joypad) {
-        joypad.select_keys_by_write(self.joypad_select);
-        self.joypad = joypad.read_input();
+    fn read_joypad(&mut self, joypad: &Joypad) {
+        self.joypad = joypad.read_input(self.joypad_select);
     }
 
     fn dma_transfer(&mut self, source_address: u8) {

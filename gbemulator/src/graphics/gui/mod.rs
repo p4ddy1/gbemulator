@@ -4,15 +4,18 @@ use crate::graphics::gui::main_menu::MainMenu;
 use imgui::Ui;
 use std::sync::{Arc, RwLock};
 use winit::event::KeyboardInput;
+use crate::emulation::Emulation;
+use crate::controls::keyboard_receiver::KeyboardReceiver;
 
 mod controls_window;
 mod main_menu;
 
-pub struct Gui {
-    main_menu: MainMenu,
+pub struct Gui<'a> {
+    main_menu: MainMenu<'a>,
     controls_window: ControlsWindow,
     state: State,
     keyboard_input: Option<KeyboardInput>,
+    emulation: &'a Emulation
 }
 
 pub struct State {
@@ -31,13 +34,14 @@ pub trait UiElement {
     fn render(&mut self, ui: &mut Ui, state: &mut State, keyboard_input: &Option<KeyboardInput>);
 }
 
-impl Gui {
-    pub fn new(config: Arc<RwLock<Config>>) -> Self {
+impl<'a> Gui<'a> {
+    pub fn new(config: Arc<RwLock<Config>>, emulation: &'a Emulation) -> Self {
         Gui {
-            main_menu: MainMenu::new(),
+            main_menu: MainMenu::new(emulation),
             controls_window: ControlsWindow::new(config),
             state: State::new(),
             keyboard_input: None,
+            emulation
         }
     }
 

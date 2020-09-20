@@ -1,9 +1,11 @@
 use glium::backend::Facade;
 use glium::texture::{MipmapsOption, RawImage2d, UncompressedFloatFormat};
-use glium::{Frame, Surface};
+use glium::{Frame, Surface, Rect, BlitTarget};
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
+
+pub const MENU_BAR_HEIGHT: i32 = 19;
 
 pub struct GameboyScreen {
     buffer1: Arc<Mutex<[u8; BUFFER_SIZE]>>,
@@ -20,7 +22,7 @@ impl GameboyScreen {
         }
     }
 
-    pub fn draw_to_frame(&self, facade: &dyn Facade, frame: &mut Frame) {
+    pub fn draw_to_frame(&self, facade: &dyn Facade, frame: &mut Frame, width: u32, height: u32) {
         let current_buffer = self.current_buffer.load(Ordering::SeqCst);
 
         let data = *if current_buffer == 1 {
@@ -40,9 +42,16 @@ impl GameboyScreen {
         )
         .unwrap();
 
+        let blit_target = BlitTarget {
+            left:0,
+            bottom: 0 as u32,
+            width: width as i32,
+            height: height as i32 - MENU_BAR_HEIGHT
+        };
+
         texture
             .as_surface()
-            .fill(frame, glium::uniforms::MagnifySamplerFilter::Nearest);
+            .blit_whole_color_to(frame, &blit_target, glium::uniforms::MagnifySamplerFilter::Nearest);
     }
 }
 

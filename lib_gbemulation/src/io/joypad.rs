@@ -15,13 +15,7 @@ pub enum Key {
     Select,
 }
 
-pub enum KeyType {
-    ButtonKeys,
-    DirectionKeys,
-}
-
 pub struct Joypad {
-    current_key_type: KeyType,
     direction_key_status: u8,
     button_key_status: u8,
 }
@@ -29,7 +23,6 @@ pub struct Joypad {
 impl Joypad {
     pub fn new() -> Joypad {
         Joypad {
-            current_key_type: KeyType::ButtonKeys,
             direction_key_status: 0xFF,
             button_key_status: 0xFF,
         }
@@ -61,22 +54,17 @@ impl Joypad {
         }
     }
 
-    pub fn select_keys_by_write(&mut self, value: u8) {
+    pub fn read_input(&self, value: u8) -> u8 {
         //Bit 4 = Direction keys selected
         if !is_bit_set(&value, 4) {
-            self.current_key_type = KeyType::DirectionKeys;
+            return self.direction_key_status;
         }
 
         //Bit 5 = Button keys
         if !is_bit_set(&value, 5) {
-            self.current_key_type = KeyType::ButtonKeys;
+            return self.button_key_status;
         }
-    }
 
-    pub fn read_input(&self) -> u8 {
-        match self.current_key_type {
-            KeyType::DirectionKeys => self.direction_key_status,
-            KeyType::ButtonKeys => self.button_key_status,
-        }
+        return 0;
     }
 }

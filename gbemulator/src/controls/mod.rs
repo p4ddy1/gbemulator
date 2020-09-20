@@ -6,6 +6,7 @@ use std::sync::mpsc::channel;
 
 pub mod keyboard_receiver;
 pub mod keyboard_sender;
+pub mod keyboard_controller;
 
 pub enum KeyEvent {
     KeyPressed(Key),

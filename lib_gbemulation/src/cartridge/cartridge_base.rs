@@ -7,7 +7,7 @@ pub struct CartridgeBase {
     pub ram_bank: u8,
     pub ram_enabled: bool,
     has_battery: bool,
-    ram_dumper: Option<Box<dyn RamDumper>>,
+    ram_dumper: Option<Box<dyn RamDumper + Send>>,
 }
 
 impl CartridgeBase {
@@ -16,7 +16,7 @@ impl CartridgeBase {
         has_ram: bool,
         ram_size: Option<usize>,
         has_battery: bool,
-        ram_dumper: Option<Box<dyn RamDumper>>,
+        ram_dumper: Option<Box<dyn RamDumper + Send>>,
     ) -> Self {
         let ram = if has_ram { create_ram(ram_size) } else { None };
 
