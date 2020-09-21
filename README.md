@@ -3,7 +3,7 @@
 
 Gameboy Emulator written from scratch in Rust. Currently under heavy development.
 
-![MarioLand2](https://cloud.lpnw.de/apps/files_sharing/publicpreview/m3FjZqCPjqY3XAj?x=2560&y=966&a=true)
+![MarioLand2](https://cloud.lpnw.de/apps/files_sharing/publicpreview/bfkazfRm2LrL3t7?x=2560&y=966&a=true)
 
 ## Status
 
