@@ -5,25 +5,6 @@ Gameboy Emulator written from scratch in Rust. Currently under heavy development
 
 ![MarioLand2](https://cloud.lpnw.de/apps/files_sharing/publicpreview/m3FjZqCPjqY3XAj?x=2560&y=966&a=true)
 
-Run it with a ROM as argument
-```
-# gbemulator rom.gb
-```
-
-### Controls
-Controls are currently fixed and not configurable. You will be able to remap them soon.
-
-| Gameboy | Keyboard   |
-|---------|------------|
-| A       | Spacebar   |
-| B       | Left Shift |
-| Up      | W          |
-| Left    | A          |
-| Down    | S          |
-| Right   | D          |
-| Start   | Return     |
-| Select  | K          |
-
 ## Status
 
 ### Working
@@ -34,14 +15,14 @@ Controls are currently fixed and not configurable. You will be able to remap the
 * Tetris, Dr. Mario, Super Mario Land 2, Kirby's Dreamland and a lot more are working
 * Timer
 * Window
+* GUI
+* Configurable controls
 
 
 ### Todo
 * Complete APU
-* Configuration for controls, audio output, etc
 * MBC
 * Interrupts (Serial and Joypad)
-* GUI
 * Probably a lot i forgot
 * Fix a few graphic glitches
 * Fix a few audio glitches

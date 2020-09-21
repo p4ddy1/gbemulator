@@ -36,21 +36,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install build dependencies
-        run: vcpkg.exe install sdl2:x64-windows
-
       - name: Build
         run: |
-          $env:Path += ";" + $env:VCPKG_INSTALLATION_ROOT + "\installed\x64-windows\bin"
-          $env:Include = $env:VCPKG_INSTALLATION_ROOT + "\installed\x64-windows\include"
-          $env:Lib = $env:VCPKG_INSTALLATION_ROOT + "\installed\x64-windows\lib"
           cargo build --release
 
       - name: Create archive
         run: |
           mkdir artifacts
           cp target/release/gbemulator.exe artifacts
-          cp ($env:VCPKG_INSTALLATION_ROOT + "\installed\x64-windows\bin\SDL2.dll") artifacts
           Compress-Archive -Path artifacts\* -DestinationPath gbemulator_windows_amd64.zip
 
       - name: Upload artifact
