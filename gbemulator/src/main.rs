@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use crate::config::config_storage::ConfigStorage;
 use crate::graphics::gameboy_screen::{GameboyScreen, MENU_BAR_HEIGHT};
 
