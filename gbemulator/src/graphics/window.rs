@@ -5,7 +5,6 @@ use glium::glutin;
 use self::glium::backend::glutin::glutin::Api;
 use self::glium::backend::glutin::glutin::GlRequest::Specific;
 
-use crate::controls::keyboard_sender::KeyboardSender;
 use crate::graphics::gameboy_screen::GameboyScreen;
 use crate::graphics::gui::Gui;
 
@@ -14,9 +13,8 @@ use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
 use std::sync::{Arc, Mutex};
 
-use self::glium::Surface;
 use crate::config::config_storage::ConfigStorage;
-use crate::controls;
+
 use crate::controls::keyboard_controller::KeyboardController;
 use crate::emulation::Emulation;
 use lib_gbemulation::io::joypad::Joypad;

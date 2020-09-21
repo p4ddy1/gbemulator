@@ -24,7 +24,7 @@ impl<'a> MainMenu<'a> {
         MenuItem::new(im_str!("Controls")).build_with_ref(ui, &mut state.controls_window_shown);
     }
 
-    fn show_file_menu(&mut self, ui: &mut Ui, state: &mut State) {
+    fn show_file_menu(&mut self, ui: &mut Ui, _state: &mut State) {
         if MenuItem::new(im_str!("Open ROM")).build(ui) {
             let rom_file: String;
             match tinyfiledialogs::open_file_dialog("Open", "", Some((&["*.gb"], "Gameboy ROM"))) {
@@ -35,7 +35,7 @@ impl<'a> MainMenu<'a> {
             }
             if let Some(sender) = &self.emulation_signal_sender {
                 //Stop running emulation
-                sender.send(EmulationSignal::Quit);
+                sender.send(EmulationSignal::Quit).unwrap();
             }
 
             let sender = self.emulation.start(&rom_file).unwrap();

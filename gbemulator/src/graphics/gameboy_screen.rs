@@ -1,6 +1,6 @@
 use glium::backend::Facade;
 use glium::texture::{MipmapsOption, RawImage2d, UncompressedFloatFormat};
-use glium::{BlitTarget, Frame, Rect, Surface};
+use glium::{BlitTarget, Frame, Surface};
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};

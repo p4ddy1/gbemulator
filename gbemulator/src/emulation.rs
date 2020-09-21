@@ -1,5 +1,5 @@
 use crate::audio_output::CpalAudioOutput;
-use crate::controls::keyboard_receiver::KeyboardReceiver;
+
 use crate::graphics::gameboy_screen::GameboyScreen;
 use crate::savegame::filesystem_ram_dumper::FilesystemRamDumper;
 use crate::EmulationSignal;
@@ -9,7 +9,7 @@ use lib_gbemulation::cpu::cpu::Cpu;
 use lib_gbemulation::gpu::gpu::Gpu;
 use lib_gbemulation::io::joypad::Joypad;
 use lib_gbemulation::memory::mmu::Mmu;
-use std::borrow::BorrowMut;
+
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::{fs, thread};
@@ -36,7 +36,7 @@ impl Emulation {
         let cloned_sender = emulation_signal_sender.clone();
 
         let screen = Arc::clone(&self.gameboy_screen);
-        let mut joypad = Arc::clone(&self.joypad);
+        let joypad = Arc::clone(&self.joypad);
 
         thread::Builder::new()
             .name("emulation".to_string())
