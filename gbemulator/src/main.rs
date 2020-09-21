@@ -23,10 +23,10 @@ use std::sync::Arc;
 mod audio_output;
 mod config;
 mod controls;
+mod emulation;
 mod graphics;
 mod savegame;
 mod screen;
-mod emulation;
 
 pub enum EmulationSignal {
     Cycle,

@@ -4,9 +4,9 @@ use crate::controls::keyboard_sender::KeyboardSender;
 use lib_gbemulation::io::joypad::Key;
 use std::sync::mpsc::channel;
 
+pub mod keyboard_controller;
 pub mod keyboard_receiver;
 pub mod keyboard_sender;
-pub mod keyboard_controller;
 
 pub enum KeyEvent {
     KeyPressed(Key),

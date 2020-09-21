@@ -1,11 +1,11 @@
 use crate::config::config::Config;
+use crate::controls::keyboard_receiver::KeyboardReceiver;
+use crate::emulation::Emulation;
 use crate::graphics::gui::controls_window::ControlsWindow;
 use crate::graphics::gui::main_menu::MainMenu;
 use imgui::Ui;
 use std::sync::{Arc, RwLock};
 use winit::event::KeyboardInput;
-use crate::emulation::Emulation;
-use crate::controls::keyboard_receiver::KeyboardReceiver;
 
 mod controls_window;
 mod main_menu;
@@ -15,7 +15,7 @@ pub struct Gui<'a> {
     controls_window: ControlsWindow,
     state: State,
     keyboard_input: Option<KeyboardInput>,
-    emulation: &'a Emulation
+    emulation: &'a Emulation,
 }
 
 pub struct State {
@@ -41,7 +41,7 @@ impl<'a> Gui<'a> {
             controls_window: ControlsWindow::new(config),
             state: State::new(),
             keyboard_input: None,
-            emulation
+            emulation,
         }
     }
 

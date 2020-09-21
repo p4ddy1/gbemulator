@@ -1,22 +1,22 @@
-use crate::graphics::gui::{State, UiElement};
-use imgui::{im_str, MenuItem, Ui};
-use winit::event::KeyboardInput;
 use crate::emulation::Emulation;
-use std::sync::mpsc::Sender;
+use crate::graphics::gui::{State, UiElement};
 use crate::EmulationSignal;
-use std::rc::Rc;
+use imgui::{im_str, MenuItem, Ui};
 use serde::export::Option::Some;
+use std::rc::Rc;
+use std::sync::mpsc::Sender;
+use winit::event::KeyboardInput;
 
 pub struct MainMenu<'a> {
     emulation: &'a Emulation,
-    emulation_signal_sender: Option<Rc<Sender<EmulationSignal>>>
+    emulation_signal_sender: Option<Rc<Sender<EmulationSignal>>>,
 }
 
 impl<'a> MainMenu<'a> {
     pub fn new(emulation: &'a Emulation) -> Self {
         MainMenu {
             emulation,
-            emulation_signal_sender: None
+            emulation_signal_sender: None,
         }
     }
 

@@ -1,29 +1,29 @@
-use std::{fs, thread};
-use crate::savegame::filesystem_ram_dumper::FilesystemRamDumper;
-use lib_gbemulation::cartridge;
-use crate::graphics::gameboy_screen::GameboyScreen;
-use std::sync::{Arc, Mutex};
 use crate::audio_output::CpalAudioOutput;
-use std::sync::mpsc::{channel, Sender};
-use lib_gbemulation::apu::apu::Apu;
-use lib_gbemulation::gpu::gpu::Gpu;
-use lib_gbemulation::memory::mmu::Mmu;
-use lib_gbemulation::cpu::cpu::Cpu;
-use crate::EmulationSignal;
 use crate::controls::keyboard_receiver::KeyboardReceiver;
+use crate::graphics::gameboy_screen::GameboyScreen;
+use crate::savegame::filesystem_ram_dumper::FilesystemRamDumper;
+use crate::EmulationSignal;
+use lib_gbemulation::apu::apu::Apu;
+use lib_gbemulation::cartridge;
+use lib_gbemulation::cpu::cpu::Cpu;
+use lib_gbemulation::gpu::gpu::Gpu;
 use lib_gbemulation::io::joypad::Joypad;
+use lib_gbemulation::memory::mmu::Mmu;
 use std::borrow::BorrowMut;
+use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, Mutex};
+use std::{fs, thread};
 
 pub struct Emulation {
     gameboy_screen: Arc<GameboyScreen>,
-    joypad: Arc<Mutex<Joypad>>
+    joypad: Arc<Mutex<Joypad>>,
 }
 
 impl Emulation {
     pub fn new(gameboy_screen: Arc<GameboyScreen>, joypad: Arc<Mutex<Joypad>>) -> Self {
         Emulation {
             gameboy_screen,
-            joypad
+            joypad,
         }
     }
 
@@ -64,17 +64,16 @@ impl Emulation {
 
                     emulation.cycle(&mut cpu, &mut mmu, &joypad);
                 }
-
-            }).unwrap();
+            })
+            .unwrap();
 
         Ok(cloned_sender)
     }
 }
 
-fn read_rom_from_file(rom_path: &String) -> Result<Vec<u8>, String>
-{
+fn read_rom_from_file(rom_path: &String) -> Result<Vec<u8>, String> {
     match fs::read(rom_path) {
         Ok(rom) => Ok(rom),
-        Err(_) => Err(format!("Could not open file {}", rom_path))
+        Err(_) => Err(format!("Could not open file {}", rom_path)),
     }
 }

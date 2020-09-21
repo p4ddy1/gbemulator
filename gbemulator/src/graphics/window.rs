@@ -14,19 +14,19 @@ use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
 use std::sync::{Arc, Mutex};
 
-use winit::event::KeyboardInput;
-use winit::platform::desktop::EventLoopExtDesktop;
+use self::glium::Surface;
 use crate::config::config_storage::ConfigStorage;
 use crate::controls;
-use crate::emulation::Emulation;
 use crate::controls::keyboard_controller::KeyboardController;
+use crate::emulation::Emulation;
 use lib_gbemulation::io::joypad::Joypad;
-use self::glium::Surface;
+use winit::event::KeyboardInput;
+use winit::platform::desktop::EventLoopExtDesktop;
 
 pub struct GraphicsWindow<'a> {
     width: u32,
     height: u32,
-    config_storage: &'a ConfigStorage
+    config_storage: &'a ConfigStorage,
 }
 
 impl<'a> GraphicsWindow<'a> {
@@ -34,14 +34,11 @@ impl<'a> GraphicsWindow<'a> {
         GraphicsWindow {
             width: width,
             height: height,
-            config_storage
+            config_storage,
         }
     }
 
-    pub fn start(
-        &self,
-        gameboy_screen: Arc<GameboyScreen>
-    ) {
+    pub fn start(&self, gameboy_screen: Arc<GameboyScreen>) {
         let mut event_loop = glutin::event_loop::EventLoop::new();
 
         let size: glutin::dpi::LogicalSize<u32> = (self.width, self.height).into();
@@ -69,19 +66,11 @@ impl<'a> GraphicsWindow<'a> {
 
         let joypad = Arc::new(Mutex::new(Joypad::new()));
 
-
-        let emulation = Emulation::new(
-            Arc::clone(&gameboy_screen),
-            Arc::clone(&joypad)
-        );
+        let emulation = Emulation::new(Arc::clone(&gameboy_screen), Arc::clone(&joypad));
 
         let keyboard_controller = KeyboardController::new(joypad, &self.config_storage);
 
-        let mut gui = Gui::new(
-            Arc::clone(&self.config_storage.config),
-            &emulation
-        );
-
+        let mut gui = Gui::new(Arc::clone(&self.config_storage.config), &emulation);
 
         event_loop.run_return(move |event, _, control_flow| {
             //Imgui also needs to handle events
@@ -112,12 +101,7 @@ impl<'a> GraphicsWindow<'a> {
 
                     let mut target = display.draw();
 
-                    gameboy_screen.draw_to_frame(
-                        &display,
-                        &mut target,
-                        dimensions.0,
-                        dimensions.1
-                    );
+                    gameboy_screen.draw_to_frame(&display, &mut target, dimensions.0, dimensions.1);
 
                     platform.prepare_render(&ui, gl_window.window());
                     let draw_data = ui.render();

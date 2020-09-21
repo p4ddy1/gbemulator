@@ -1,19 +1,19 @@
-use std::sync::{Mutex, Arc, RwLock};
-use lib_gbemulation::io::joypad::Joypad;
 use crate::config::config::Config;
 use crate::config::config_storage::ConfigStorage;
+use lib_gbemulation::io::joypad::Joypad;
+use std::sync::{Arc, Mutex, RwLock};
 use winit::event::VirtualKeyCode;
 
 pub struct KeyboardController {
     pub joypad: Arc<Mutex<Joypad>>,
-    config: Arc<RwLock<Config>>
+    config: Arc<RwLock<Config>>,
 }
 
 impl KeyboardController {
     pub fn new(joypad: Arc<Mutex<Joypad>>, config_storage: &ConfigStorage) -> Self {
         KeyboardController {
             joypad,
-            config: Arc::clone(&config_storage.config)
+            config: Arc::clone(&config_storage.config),
         }
     }
 
