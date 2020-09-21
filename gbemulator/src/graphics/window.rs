@@ -17,7 +17,10 @@ use crate::config::config_storage::ConfigStorage;
 
 use crate::controls::keyboard_controller::KeyboardController;
 use crate::emulation::Emulation;
+use crate::EmulationSignal;
 use lib_gbemulation::io::joypad::Joypad;
+use std::rc::Rc;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use winit::event::KeyboardInput;
 use winit::platform::desktop::EventLoopExtDesktop;
 
@@ -25,18 +28,20 @@ pub struct GraphicsWindow<'a> {
     width: u32,
     height: u32,
     config_storage: &'a ConfigStorage,
+    emulation_signal_sender: Option<Rc<Sender<EmulationSignal>>>,
 }
 
 impl<'a> GraphicsWindow<'a> {
     pub fn new(width: u32, height: u32, config_storage: &'a ConfigStorage) -> Self {
         GraphicsWindow {
-            width: width,
-            height: height,
+            width,
+            height,
             config_storage,
+            emulation_signal_sender: None,
         }
     }
 
-    pub fn start(&self, gameboy_screen: Arc<GameboyScreen>) {
+    pub fn start(&mut self, gameboy_screen: Arc<GameboyScreen>) {
         let mut event_loop = glutin::event_loop::EventLoop::new();
 
         let size: glutin::dpi::LogicalSize<u32> = (self.width, self.height).into();
@@ -68,11 +73,15 @@ impl<'a> GraphicsWindow<'a> {
 
         let keyboard_controller = KeyboardController::new(joypad, &self.config_storage);
 
-        let mut gui = Gui::new(Arc::clone(&self.config_storage.config), &emulation);
+        let (rom_filename_sender, rom_filename_receiver) = channel();
+
+        let mut gui = Gui::new(Arc::clone(&self.config_storage.config), rom_filename_sender);
 
         event_loop.run_return(move |event, _, control_flow| {
             //Imgui also needs to handle events
             platform.handle_event(imgui.io_mut(), display.gl_window().window(), &event);
+
+            self.start_emulation(&rom_filename_receiver, &emulation);
 
             match event {
                 glutin::event::Event::WindowEvent { event, .. } => match event {
@@ -110,6 +119,30 @@ impl<'a> GraphicsWindow<'a> {
                 _ => {}
             }
         });
+    }
+
+    fn start_emulation(
+        &mut self,
+        rom_filename_receiver: &Receiver<Option<String>>,
+        emulation: &Emulation,
+    ) {
+        if let Ok(filename) = rom_filename_receiver.try_recv() {
+            let rom_file: String;
+            match filename {
+                Some(file) => rom_file = file,
+                None => {
+                    return;
+                }
+            }
+            if let Some(sender) = &self.emulation_signal_sender {
+                //Stop running emulation
+                sender.send(EmulationSignal::Quit).unwrap();
+            }
+
+            let sender = emulation.start(&rom_file).unwrap();
+
+            self.emulation_signal_sender = Some(Rc::new(sender));
+        }
     }
 }
 

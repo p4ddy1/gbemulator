@@ -20,7 +20,8 @@ pub enum EmulationSignal {
 
 fn main() {
     let config_storage = ConfigStorage::create_from_file("gbemulator.toml".to_string()).unwrap();
-    let window = GraphicsWindow::new(160 * 3, (144 * 3) + MENU_BAR_HEIGHT as u32, &config_storage);
+    let mut window =
+        GraphicsWindow::new(160 * 3, (144 * 3) + MENU_BAR_HEIGHT as u32, &config_storage);
 
     let gameboy_screen = Arc::new(GameboyScreen::new());
     window.start(gameboy_screen);

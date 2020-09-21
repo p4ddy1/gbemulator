@@ -1,22 +1,18 @@
-use crate::emulation::Emulation;
 use crate::graphics::gui::{State, UiElement};
-use crate::EmulationSignal;
 use imgui::{im_str, MenuItem, Ui};
 use serde::export::Option::Some;
-use std::rc::Rc;
 use std::sync::mpsc::Sender;
+use std::thread;
 use winit::event::KeyboardInput;
 
-pub struct MainMenu<'a> {
-    emulation: &'a Emulation,
-    emulation_signal_sender: Option<Rc<Sender<EmulationSignal>>>,
+pub struct MainMenu {
+    rom_filename_sender: Sender<Option<String>>,
 }
 
-impl<'a> MainMenu<'a> {
-    pub fn new(emulation: &'a Emulation) -> Self {
+impl MainMenu {
+    pub fn new(rom_filename_sender: Sender<Option<String>>) -> Self {
         MainMenu {
-            emulation,
-            emulation_signal_sender: None,
+            rom_filename_sender,
         }
     }
 
@@ -26,26 +22,18 @@ impl<'a> MainMenu<'a> {
 
     fn show_file_menu(&mut self, ui: &mut Ui, _state: &mut State) {
         if MenuItem::new(im_str!("Open ROM")).build(ui) {
-            let rom_file: String;
-            match tinyfiledialogs::open_file_dialog("Open", "", Some((&["*.gb"], "Gameboy ROM"))) {
-                Some(file) => rom_file = file,
-                None => {
-                    return;
-                }
-            }
-            if let Some(sender) = &self.emulation_signal_sender {
-                //Stop running emulation
-                sender.send(EmulationSignal::Quit).unwrap();
-            }
-
-            let sender = self.emulation.start(&rom_file).unwrap();
-
-            self.emulation_signal_sender = Some(Rc::new(sender));
+            let filename_sender = self.rom_filename_sender.clone();
+            //Thread is required otherwise this will crash on Windows
+            thread::spawn(move || {
+                let filename =
+                    tinyfiledialogs::open_file_dialog("Open", "", Some((&["*.gb"], "Gameboy ROM")));
+                filename_sender.send(filename).unwrap();
+            });
         }
     }
 }
 
-impl<'a> UiElement for MainMenu<'a> {
+impl UiElement for MainMenu {
     fn render(&mut self, ui: &mut Ui, state: &mut State, _: &Option<KeyboardInput>) {
         if let Some(menu_bar) = ui.begin_main_menu_bar() {
             if let Some(menu) = ui.begin_menu(im_str!("File"), true) {

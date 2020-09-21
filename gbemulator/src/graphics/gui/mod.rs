@@ -1,17 +1,17 @@
 use crate::config::config::Config;
 
-use crate::emulation::Emulation;
 use crate::graphics::gui::controls_window::ControlsWindow;
 use crate::graphics::gui::main_menu::MainMenu;
 use imgui::Ui;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, RwLock};
 use winit::event::KeyboardInput;
 
 mod controls_window;
 mod main_menu;
 
-pub struct Gui<'a> {
-    main_menu: MainMenu<'a>,
+pub struct Gui {
+    main_menu: MainMenu,
     controls_window: ControlsWindow,
     state: State,
     keyboard_input: Option<KeyboardInput>,
@@ -33,10 +33,10 @@ pub trait UiElement {
     fn render(&mut self, ui: &mut Ui, state: &mut State, keyboard_input: &Option<KeyboardInput>);
 }
 
-impl<'a> Gui<'a> {
-    pub fn new(config: Arc<RwLock<Config>>, emulation: &'a Emulation) -> Self {
+impl Gui {
+    pub fn new(config: Arc<RwLock<Config>>, rom_filename_sender: Sender<Option<String>>) -> Self {
         Gui {
-            main_menu: MainMenu::new(emulation),
+            main_menu: MainMenu::new(rom_filename_sender),
             controls_window: ControlsWindow::new(config),
             state: State::new(),
             keyboard_input: None,

@@ -41,7 +41,7 @@ impl<'a> Apu<'a> {
             noise_channel: NoiseChannel::new(NOISE_CHANNEL_START_ADDRESS),
             mixer: Mixer::new(),
             clock: 0,
-            output_step: output_step,
+            output_step,
             enbaled: false,
         }
     }

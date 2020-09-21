@@ -57,6 +57,7 @@ impl Emulation {
 
                     if let EmulationSignal::Quit = signal {
                         mmu.save();
+                        audio_output.stop();
                         break;
                     }
 

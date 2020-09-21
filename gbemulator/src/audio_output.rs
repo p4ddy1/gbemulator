@@ -1,5 +1,5 @@
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
-use cpal::{EventLoop, Format, Host, SampleFormat, StreamData, UnknownTypeOutputBuffer};
+use cpal::{EventLoop, Format, Host, SampleFormat, StreamData, StreamId, UnknownTypeOutputBuffer};
 use lib_gbemulation::apu::AudioOutput;
 
 use crate::EmulationSignal;
@@ -28,6 +28,8 @@ pub struct CpalAudioOutput {
     buffer: Arc<Mutex<AudioBuffer>>,
     host: Host,
     sync_sender: Option<Sender<EmulationSignal>>,
+    event_loop: Arc<EventLoop>,
+    current_stream_id: Option<StreamId>,
 }
 
 impl CpalAudioOutput {
@@ -35,12 +37,15 @@ impl CpalAudioOutput {
         let buffer = Arc::new(Mutex::new(AudioBuffer::new(buffer_size * 2)));
 
         let host = cpal::default_host();
+        let event_loop = host.event_loop();
 
         CpalAudioOutput {
             sample_rate: None,
             buffer,
             host,
             sync_sender,
+            event_loop: Arc::new(event_loop),
+            current_stream_id: None,
         }
     }
 
@@ -54,8 +59,6 @@ impl CpalAudioOutput {
     }
 
     pub fn start(&mut self, device_name: String) {
-        let event_loop = self.host.event_loop();
-
         let mut device_list = self.host.devices().unwrap();
 
         let device = device_list
@@ -72,22 +75,34 @@ impl CpalAudioOutput {
 
         self.sample_rate = Some(format.sample_rate.0);
 
-        let stream_id = event_loop.build_output_stream(&device, &format).unwrap();
+        let stream_id = self
+            .event_loop
+            .build_output_stream(&device, &format)
+            .unwrap();
+        self.current_stream_id = Some(stream_id.clone());
 
-        event_loop.play_stream(stream_id).unwrap();
+        self.event_loop.play_stream(stream_id).unwrap();
 
         let buffer = Arc::clone(&self.buffer);
         let sender = self.sync_sender.clone();
+
+        let event_loop = Arc::clone(&self.event_loop);
 
         thread::Builder::new()
             .name("audio".to_string())
             .spawn(move || event_loop_runner(event_loop, buffer, sender))
             .unwrap();
     }
+
+    pub fn stop(&self) {
+        if let Some(stream_id) = &self.current_stream_id {
+            self.event_loop.destroy_stream(stream_id.clone());
+        }
+    }
 }
 
 fn event_loop_runner(
-    event_loop: EventLoop,
+    event_loop: Arc<EventLoop>,
     audio_buffer: Arc<Mutex<AudioBuffer>>,
     sync_sender: Option<Sender<EmulationSignal>>,
 ) {
