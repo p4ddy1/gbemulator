@@ -1,6 +1,3 @@
-use glium::backend::Facade;
-use glium::texture::{MipmapsOption, RawImage2d, UncompressedFloatFormat};
-use glium::{BlitTarget, Frame, Surface};
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
@@ -22,37 +19,40 @@ impl GameboyScreen {
         }
     }
 
-    pub fn draw_to_frame(&self, facade: &dyn Facade, frame: &mut Frame, width: u32, height: u32) {
+    pub fn draw_to_queue(&self, queue: &wgpu::Queue, texture: &wgpu::Texture, texture_size: wgpu::Extent3d) {
         let current_buffer = self.current_buffer.load(Ordering::SeqCst);
 
-        let data = *if current_buffer == 1 {
+        let pixel_data = *if current_buffer == 1 {
             self.buffer1.lock().unwrap()
         } else {
             self.buffer2.lock().unwrap()
         };
 
-        let screen =
-            RawImage2d::from_raw_rgb_reversed(&data, (SCREEN_WIDTH as u32, SCREEN_HEIGHT as u32));
+        let mut texture_output = [0; SCREEN_WIDTH * SCREEN_HEIGHT * 4];
 
-        let texture = glium::texture::Texture2d::with_format(
-            facade,
-            screen,
-            UncompressedFloatFormat::U8U8U8,
-            MipmapsOption::NoMipmap,
-        )
-        .unwrap();
+        for (i, pixel) in texture_output.iter_mut().enumerate() {
+            if i % 4 < 3 {
+                let data_index = i - (i / 4);
+                *pixel = pixel_data[data_index];
+            } else {
+                *pixel = 0;
+            }
+        }
 
-        let blit_target = BlitTarget {
-            left: 0,
-            bottom: 0 as u32,
-            width: width as i32,
-            height: height as i32 - MENU_BAR_HEIGHT,
-        };
-
-        texture.as_surface().blit_whole_color_to(
-            frame,
-            &blit_target,
-            glium::uniforms::MagnifySamplerFilter::Nearest,
+        queue.write_texture(
+            wgpu::ImageCopyTexture {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All
+            },
+            &texture_output,
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: std::num::NonZeroU32::new(4 * SCREEN_WIDTH as u32),
+                rows_per_image: std::num::NonZeroU32::new(SCREEN_HEIGHT as u32),
+            },
+            texture_size
         );
     }
 }

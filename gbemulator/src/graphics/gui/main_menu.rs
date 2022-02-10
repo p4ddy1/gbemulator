@@ -1,9 +1,6 @@
-use crate::graphics::gui::{State, UiElement};
-use imgui::{im_str, MenuItem, Ui};
-use serde::export::Option::Some;
+use crate::graphics::gui::State;
 use std::sync::mpsc::Sender;
 use std::thread;
-use winit::event::KeyboardInput;
 
 pub struct MainMenu {
     rom_filename_sender: Sender<Option<String>>,
@@ -16,37 +13,25 @@ impl MainMenu {
         }
     }
 
-    fn show_options_menu(&mut self, ui: &mut Ui, state: &mut State) {
-        MenuItem::new(im_str!("Controls")).build_with_ref(ui, &mut state.controls_window_shown);
-    }
-
-    fn show_file_menu(&mut self, ui: &mut Ui, _state: &mut State) {
-        if MenuItem::new(im_str!("Open ROM")).build(ui) {
-            let filename_sender = self.rom_filename_sender.clone();
-            //Thread is required otherwise this will crash on Windows
-            thread::spawn(move || {
-                let filename =
-                    tinyfiledialogs::open_file_dialog("Open", "", Some((&["*.gb"], "Gameboy ROM")));
-                filename_sender.send(filename).unwrap();
+    pub fn update(&mut self, ui: &mut egui::Ui, frame: &epi::Frame, state: &mut State) {
+        egui::menu::bar(ui, |ui| {
+            ui.menu_button("File", |ui| {
+                if ui.button("Open").clicked() {
+                    let filename_sender = self.rom_filename_sender.clone();
+                    //Thread is required otherwise this will crash on Windows TODO: Check if this is still true
+                    thread::spawn(move || {
+                        let filename =
+                            tinyfiledialogs::open_file_dialog("Open", "", Some((&["*.gb"], "Gameboy ROM")));
+                        filename_sender.send(filename).unwrap();
+                    });
+                }
             });
-        }
-    }
-}
 
-impl UiElement for MainMenu {
-    fn render(&mut self, ui: &mut Ui, state: &mut State, _: &Option<KeyboardInput>) {
-        if let Some(menu_bar) = ui.begin_main_menu_bar() {
-            if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
-                self.show_file_menu(ui, state);
-                menu.end(&ui);
-            }
-
-            if let Some(menu) = ui.begin_menu(im_str!("Options"), true) {
-                self.show_options_menu(ui, state);
-                menu.end(&ui);
-            }
-
-            menu_bar.end(&ui);
-        }
+            ui.menu_button("Controls", |ui| {
+                if ui.button("Configure").clicked() {
+                    state.controls_window_shown = true;
+                }
+            });
+        });
     }
 }

@@ -1,7 +1,6 @@
 use core::fmt;
 use lib_gbemulation::io::joypad::Key;
 use serde::de::{MapAccess, Visitor};
-use serde::export::Formatter;
 use serde::ser::SerializeMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
@@ -126,7 +125,7 @@ struct KeyboardMapVisitor;
 impl<'de> Visitor<'de> for KeyboardMapVisitor {
     type Value = KeyboardMap;
 
-    fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("Keyboard Map")
     }
 

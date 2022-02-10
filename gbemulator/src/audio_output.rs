@@ -66,11 +66,10 @@ impl CpalAudioOutput {
             .unwrap();
 
         let default_format = device.default_output_format().unwrap();
-
         let format = Format {
             channels: 2,
             sample_rate: default_format.sample_rate,
-            data_type: SampleFormat::I16,
+            data_type: SampleFormat::F32,
         };
 
         self.sample_rate = Some(format.sample_rate.0);
@@ -110,7 +109,8 @@ fn event_loop_runner(
         let stream_data = stream_result.unwrap();
 
         if let StreamData::Output {
-            buffer: UnknownTypeOutputBuffer::I16(mut cpal_buffer),
+            //TODO: Support integer too
+            buffer: UnknownTypeOutputBuffer::F32(mut cpal_buffer),
         } = stream_data
         {
             let mut buffer = audio_buffer.lock().unwrap();
@@ -130,13 +130,13 @@ fn event_loop_runner(
             if buffer.data.len() < cpal_buffer.len() {
                 println!("Audio Buffer underrun!");
                 for sample in cpal_buffer.iter_mut() {
-                    *sample = 0;
+                    *sample = 0.0;
                 }
                 return;
             }
 
             for (i, sample) in buffer.data.drain(0..cpal_buffer.len()).enumerate() {
-                cpal_buffer[i] = sample;
+                cpal_buffer[i] = sample as f32 / i16::MAX as f32;
             }
         }
     });

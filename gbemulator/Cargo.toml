@@ -2,18 +2,21 @@
 name = "gbemulator"
 version = "0.1.0"
 authors = ["Patric Kanngießer <mail@lpnw.de>"]
-edition = "2018"
-
+edition = "2021"
+resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 cpal = "0.11.0"
-glium = "0.27.0"
+wgpu = "0.12.0"
 toml = "0.5.6"
-imgui = "0.4.0"
-imgui-winit-support = "0.4.0"
-imgui-glium-renderer = "0.4.0"
-tinyfiledialogs = "3.0"
+tinyfiledialogs = "3.9.0"
+pollster = "0.2.5"
+egui = "0.16.1"
+egui_wgpu_backend = "0.16.0"
+egui_demo_lib = "0.16.0"
+egui_winit_platform = "0.13.0"
+epi = "0.16.0"
 
 [dependencies.lib_gbemulation]
 path = "../lib_gbemulation"
@@ -23,6 +26,10 @@ features = ["serialize"]
 version = "1.0.111"
 features = ["derive"]
 
+[dependencies.imgui-winit-support]
+version = "0.8.2"
+features = ["winit-26"]
+
 [dependencies.winit]
-version = "0.22.2"
+version = "0.26.1"
 features = ["serde"]

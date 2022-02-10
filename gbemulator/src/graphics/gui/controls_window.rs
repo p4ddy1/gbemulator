@@ -1,23 +1,21 @@
 use crate::config::config::Config;
 use crate::config::controls::KeyboardMap;
-use crate::graphics::gui::{State, UiElement};
+use crate::graphics::gui::State;
 
-use imgui::{im_str, Condition, ImString, Ui, Window};
 use lib_gbemulation::io::joypad::Key;
-use serde::export::Option::Some;
 use std::sync::{Arc, RwLock};
 use winit::event::{ElementState, KeyboardInput};
 
 pub struct ControlsWindow {
     config: Arc<RwLock<Config>>,
-    text_input_a: ImString,
-    text_input_b: ImString,
-    text_input_up: ImString,
-    text_input_down: ImString,
-    text_input_left: ImString,
-    text_input_right: ImString,
-    text_input_start: ImString,
-    text_input_select: ImString,
+    text_input_a: String,
+    text_input_b: String,
+    text_input_up: String,
+    text_input_down: String,
+    text_input_left: String,
+    text_input_right: String,
+    text_input_start: String,
+    text_input_select: String,
 }
 
 impl ControlsWindow {
@@ -37,25 +35,113 @@ impl ControlsWindow {
             text_input_select: parse_key_mapping(&map, Key::Select),
         }
     }
-}
 
-fn parse_key_mapping(map: &KeyboardMap, key: Key) -> ImString {
-    ImString::from(format!("{:?}", map.get_key_code_by_key(key)))
+    pub fn update(&mut self, ctx: &egui::CtxRef, state: &mut State, keyboard_input: Option<KeyboardInput>) {
+        if !state.controls_window_shown {
+            return;
+        }
+
+        egui::Window::new("Controls")
+            .open(&mut state.controls_window_shown)
+            .show(ctx, |ui| {
+            ui.columns(4, |ui| {
+                let col1 = ui.get_mut(0).unwrap();
+                create_keyboard_input_field(
+                    &self.config,
+                    col1,
+                    &mut self.text_input_a,
+                    keyboard_input,
+                    Key::A
+                );
+
+                create_keyboard_input_field(
+                    &self.config,
+                    col1,
+                    &mut self.text_input_up,
+                    keyboard_input,
+                    Key::Up
+                );
+
+                create_keyboard_input_field(
+                    &self.config,
+                    col1,
+                    &mut self.text_input_left,
+                    keyboard_input,
+                    Key::Left
+                );
+
+                create_keyboard_input_field(
+                    &self.config,
+                    col1,
+                    &mut self.text_input_start,
+                    keyboard_input,
+                    Key::Start
+                );
+
+                let col2 = ui.get_mut(1).unwrap();
+
+                create_clear_button(&self.config, col2, &mut self.text_input_a, Key::A);
+                create_clear_button(&self.config, col2, &mut self.text_input_up, Key::Up);
+                create_clear_button(&self.config, col2, &mut self.text_input_left, Key::Left);
+                create_clear_button(&self.config, col2, &mut self.text_input_start, Key::Start);
+
+                let col3 = ui.get_mut(2).unwrap();
+
+                create_keyboard_input_field(
+                    &self.config,
+                    col3,
+                    &mut self.text_input_b,
+                    keyboard_input,
+                    Key::B
+                );
+
+                create_keyboard_input_field(
+                    &self.config,
+                    col3,
+                    &mut self.text_input_down,
+                    keyboard_input,
+                    Key::Down
+                );
+
+                create_keyboard_input_field(
+                    &self.config,
+                    col3,
+                    &mut self.text_input_right,
+                    keyboard_input,
+                    Key::Right
+                );
+
+                create_keyboard_input_field(
+                    &self.config,
+                    col3,
+                    &mut self.text_input_select,
+                    keyboard_input,
+                    Key::Select
+                );
+
+
+                let col4 = ui.get_mut(3).unwrap();
+
+                create_clear_button(&self.config, col4, &mut self.text_input_b, Key::B);
+                create_clear_button(&self.config, col4, &mut self.text_input_down, Key::Down);
+                create_clear_button(&self.config, col4, &mut self.text_input_right, Key::Right);
+                create_clear_button(&self.config, col4, &mut self.text_input_select, Key::Select);
+            });
+        });
+    }
 }
 
 fn create_keyboard_input_field(
     config: &Arc<RwLock<Config>>,
-    ui: &Ui,
-    keyboard_input: &Option<KeyboardInput>,
-    text_input: &mut ImString,
-    key: Key,
+    ui: &mut egui::Ui,
+    text_input: &mut String,
+    keyboard_input: Option<KeyboardInput>,
+    key: Key
 ) {
-    ui.input_text(&ImString::from(format!("{:?}", key)), text_input)
-        .read_only(true)
-        .build();
+    ui.label(format!("{:?}", key));
 
-    //Listen for keyboard input and map it to
-    if ui.is_item_active() {
+    let text_edit = ui.text_edit_singleline(text_input);
+    if text_edit.has_focus() {
         if let Some(input) = keyboard_input {
             if input.state == ElementState::Pressed {
                 let map = &mut config.write().unwrap().controls.keyboard_map;
@@ -68,108 +154,20 @@ fn create_keyboard_input_field(
     }
 }
 
-fn create_clear_button(config: &Arc<RwLock<Config>>, ui: &Ui, text_input: &mut ImString, key: Key) {
-    if ui.button(&ImString::from(format!("X##{:?}", key)), [0.0, 0.0]) {
+fn create_clear_button(
+    config: &Arc<RwLock<Config>>,
+    ui: &mut egui::Ui,
+    text_input: &mut String,
+    key: Key
+) {
+    ui.label(""); //TODO: Ugly
+    if ui.button("[X]").clicked() {
         let map = &mut config.write().unwrap().controls.keyboard_map;
         map.clear_mapping_by_key(key);
         *text_input = parse_key_mapping(map, key);
     }
 }
 
-impl UiElement for ControlsWindow {
-    fn render(&mut self, ui: &mut Ui, state: &mut State, keyboard_input: &Option<KeyboardInput>) {
-        if state.controls_window_shown {
-            Window::new(im_str!("Controls"))
-                .size([500.0, 300.0], Condition::FirstUseEver)
-                .opened(&mut state.controls_window_shown)
-                .build(ui, || {
-                    ui.columns(4, im_str!("Keyboard Buttons"), false);
-
-                    ui.set_column_width(0, 200.0);
-
-                    create_keyboard_input_field(
-                        &self.config,
-                        ui,
-                        keyboard_input,
-                        &mut self.text_input_a,
-                        Key::A,
-                    );
-
-                    create_keyboard_input_field(
-                        &self.config,
-                        ui,
-                        keyboard_input,
-                        &mut self.text_input_up,
-                        Key::Up,
-                    );
-
-                    create_keyboard_input_field(
-                        &self.config,
-                        ui,
-                        keyboard_input,
-                        &mut self.text_input_left,
-                        Key::Left,
-                    );
-
-                    create_keyboard_input_field(
-                        &self.config,
-                        ui,
-                        keyboard_input,
-                        &mut self.text_input_start,
-                        Key::Start,
-                    );
-
-                    ui.next_column();
-                    ui.set_column_width(1, 50.0);
-
-                    create_clear_button(&self.config, ui, &mut self.text_input_a, Key::A);
-                    create_clear_button(&self.config, ui, &mut self.text_input_up, Key::Up);
-                    create_clear_button(&self.config, ui, &mut self.text_input_left, Key::Left);
-                    create_clear_button(&self.config, ui, &mut self.text_input_start, Key::Start);
-
-                    ui.next_column();
-                    ui.set_column_width(2, 200.0);
-
-                    create_keyboard_input_field(
-                        &self.config,
-                        ui,
-                        keyboard_input,
-                        &mut self.text_input_b,
-                        Key::B,
-                    );
-
-                    create_keyboard_input_field(
-                        &self.config,
-                        ui,
-                        keyboard_input,
-                        &mut self.text_input_down,
-                        Key::Down,
-                    );
-
-                    create_keyboard_input_field(
-                        &self.config,
-                        ui,
-                        keyboard_input,
-                        &mut self.text_input_right,
-                        Key::Right,
-                    );
-
-                    create_keyboard_input_field(
-                        &self.config,
-                        ui,
-                        keyboard_input,
-                        &mut self.text_input_select,
-                        Key::Select,
-                    );
-
-                    ui.next_column();
-                    ui.set_column_width(1, 50.0);
-
-                    create_clear_button(&self.config, ui, &mut self.text_input_b, Key::B);
-                    create_clear_button(&self.config, ui, &mut self.text_input_down, Key::Down);
-                    create_clear_button(&self.config, ui, &mut self.text_input_right, Key::Right);
-                    create_clear_button(&self.config, ui, &mut self.text_input_select, Key::Select);
-                });
-        }
-    }
+fn parse_key_mapping(map: &KeyboardMap, key: Key) -> String {
+    format!("{:?}", map.get_key_code_by_key(key))
 }

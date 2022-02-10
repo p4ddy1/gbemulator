@@ -1,15 +1,4 @@
-extern crate glium;
-
-use glium::glutin;
-
-use self::glium::backend::glutin::glutin::Api;
-use self::glium::backend::glutin::glutin::GlRequest::Specific;
-
 use crate::graphics::gameboy_screen::GameboyScreen;
-use crate::graphics::gui::Gui;
-
-use imgui_glium_renderer::Renderer;
-use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
 use std::sync::{Arc, Mutex};
 
@@ -21,8 +10,22 @@ use crate::EmulationSignal;
 use lib_gbemulation::io::joypad::Joypad;
 use std::rc::Rc;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use egui::FontDefinitions;
+use egui_wgpu_backend::ScreenDescriptor;
+use egui_winit_platform::PlatformDescriptor;
+use epi::App;
+use std::string::String;
+use wgpu::{FilterMode, Surface};
 use winit::event::KeyboardInput;
-use winit::platform::desktop::EventLoopExtDesktop;
+use winit::{
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
+use winit::dpi::PhysicalSize;
+use winit::platform::run_return::EventLoopExtRunReturn;
+use lib_gbemulation::gpu::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::graphics::gui::emulator_app::EmulatorApp;
 
 pub struct GraphicsWindow<'a> {
     width: u32,
@@ -30,6 +33,15 @@ pub struct GraphicsWindow<'a> {
     config_storage: &'a ConfigStorage,
     emulation_signal_sender: Option<Rc<Sender<EmulationSignal>>>,
 }
+
+struct ExampleRepaintSignal;
+
+impl epi::backend::RepaintSignal for ExampleRepaintSignal {
+    fn request_repaint(&self) {
+
+    }
+}
+
 
 impl<'a> GraphicsWindow<'a> {
     pub fn new(width: u32, height: u32, config_storage: &'a ConfigStorage) -> Self {
@@ -41,31 +53,66 @@ impl<'a> GraphicsWindow<'a> {
         }
     }
 
-    pub fn start(&mut self, gameboy_screen: Arc<GameboyScreen>) {
-        let mut event_loop = glutin::event_loop::EventLoop::new();
+    pub async fn start(&mut self, gameboy_screen: Arc<GameboyScreen>) {
+        let mut event_loop = EventLoop::new();
 
-        let size: glutin::dpi::LogicalSize<u32> = (self.width, self.height).into();
-        let window_builder = glutin::window::WindowBuilder::new()
+        let size = winit::dpi::PhysicalSize {
+            width: self.width,
+            height: self.height
+        };
+
+        let window = WindowBuilder::new()
             .with_title("GBemulator")
-            .with_inner_size(size);
-        let context_builder = glutin::ContextBuilder::new()
-            //We dont need the latest version
-            .with_gl(Specific(Api::OpenGl, (3, 1)))
-            .with_vsync(true);
+            .with_inner_size(size)
+            .build(&event_loop).unwrap();
 
-        let display = glium::Display::new(window_builder, context_builder, &event_loop).unwrap();
+        let wgpu_instance = wgpu::Instance::new(wgpu::Backends::all());
+        let surface = unsafe { wgpu_instance.create_surface(&window) };
 
-        let mut imgui = imgui::Context::create();
-        imgui.set_ini_filename(None);
+        let adapter = wgpu_instance.request_adapter(
+            &wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                compatible_surface: Some(&surface),
+                force_fallback_adapter: false
+            }
+        ).await.unwrap();
 
-        let mut platform = WinitPlatform::init(&mut imgui);
-        platform.attach_window(
-            imgui.io_mut(),
-            &display.gl_window().window(),
-            HiDpiMode::Rounded,
+        let (device, queue) = adapter.request_device(
+            &wgpu::DeviceDescriptor {
+                features: wgpu::Features::empty(),
+                limits: wgpu::Limits::default(),
+                label: None
+            },
+            None,
+        ).await.unwrap();
+
+        let mut config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            width: size.width,
+            height: size.height,
+            present_mode: wgpu::PresentMode::Fifo
+        };
+
+        surface.configure(&device, &config);
+
+        let texture_size = wgpu::Extent3d {
+            width: SCREEN_WIDTH as u32,
+            height: SCREEN_HEIGHT as u32,
+            depth_or_array_layers: 1
+        };
+
+        let screen_texture = device.create_texture(
+            &wgpu::TextureDescriptor {
+                size: texture_size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: config.format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                label: Some("Screen Texture")
+            }
         );
-
-        let mut renderer = Renderer::init(&mut imgui, &display).unwrap();
 
         let joypad = Arc::new(Mutex::new(Joypad::new()));
 
@@ -75,46 +122,98 @@ impl<'a> GraphicsWindow<'a> {
 
         let (rom_filename_sender, rom_filename_receiver) = channel();
 
-        let mut gui = Gui::new(Arc::clone(&self.config_storage.config), rom_filename_sender);
+        let mut platform = egui_winit_platform::Platform::new(PlatformDescriptor {
+            physical_width: size.width,
+            physical_height: size.height,
+            scale_factor: window.scale_factor(),
+            font_definitions: FontDefinitions::default(),
+            style: std::default::Default::default()
+        });
+
+        let mut egui_rpass = egui_wgpu_backend::RenderPass::new(&device, config.format, 1);
+
+        let mut emulator_gui_app = EmulatorApp::new(
+            rom_filename_sender,
+            Arc::clone(&self.config_storage.config)
+        );
+
+        let repaint_signal = std::sync::Arc::new(ExampleRepaintSignal{});
 
         event_loop.run_return(move |event, _, control_flow| {
-            //Imgui also needs to handle events
-            platform.handle_event(imgui.io_mut(), display.gl_window().window(), &event);
+            platform.handle_event(&event);
 
             self.start_emulation(&rom_filename_receiver, &emulation);
 
             match event {
-                glutin::event::Event::WindowEvent { event, .. } => match event {
-                    glutin::event::WindowEvent::CloseRequested => {
-                        *control_flow = glutin::event_loop::ControlFlow::Exit;
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::CloseRequested => {
+                        *control_flow = ControlFlow::Exit;
+                        println!("Closing...");
                         return;
                     }
-                    glutin::event::WindowEvent::KeyboardInput { input, .. } => {
-                        gui.set_keyboard_input(input);
-                        handle_inputs(&keyboard_controller, &input)
+                    WindowEvent::KeyboardInput { input, .. } => {
+                        emulator_gui_app.set_keyboard_input(input);
+                        handle_inputs(&keyboard_controller, &input);
+                    },
+                    WindowEvent::Resized(physical_size) => {
+                        resize(&surface, &mut config, &device, physical_size);
+                    },
+                    WindowEvent::ScaleFactorChanged { new_inner_size, ..} => {
+                        resize(&surface, &mut config, &device, *new_inner_size);
                     }
                     _ => {}
                 },
-                glutin::event::Event::MainEventsCleared => {
-                    let dimensions = display.get_framebuffer_dimensions();
-                    let gl_window = display.gl_window();
-                    platform
-                        .prepare_frame(imgui.io_mut(), &gl_window.window())
-                        .unwrap();
+                Event::MainEventsCleared => {
+                    let output = surface.get_current_texture().unwrap();
+                    let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+                    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                        label: Some("Render Encoder")
+                    });
 
-                    let mut ui = imgui.frame();
 
-                    gui.render(&mut ui);
+                    platform.begin_frame();
+                    let app_output = epi::backend::AppOutput::default();
+                    let mut frame =  epi::Frame::new(epi::backend::FrameData {
+                        info: epi::IntegrationInfo {
+                            name: "emulator_egui",
+                            web_info: None,
+                            cpu_usage: None,
+                            native_pixels_per_point: Some(window.scale_factor() as _),
+                            prefer_dark_mode: None,
+                        },
+                        output: app_output,
+                        repaint_signal: repaint_signal.clone(),
+                    });
+                    emulator_gui_app.set_tex(egui_rpass.egui_texture_from_wgpu_texture(&device, &screen_texture, FilterMode::Nearest));
 
-                    let mut target = display.draw();
+                    emulator_gui_app.update(&platform.context(), &mut frame);
 
-                    gameboy_screen.draw_to_frame(&display, &mut target, dimensions.0, dimensions.1);
+                    let (_output, paint_commands) = platform.end_frame(Some(&window));
+                    let paint_jobs = platform.context().tessellate(paint_commands);
 
-                    platform.prepare_render(&ui, gl_window.window());
-                    let draw_data = ui.render();
-                    renderer.render(&mut target, draw_data).unwrap();
+                    let screen_descriptor = ScreenDescriptor {
+                        physical_width: config.width,
+                        physical_height: config.height,
+                        scale_factor: window.scale_factor() as f32,
+                    };
 
-                    target.finish().unwrap();
+
+                    egui_rpass.update_texture(&device, &queue, &platform.context().font_image());
+                    egui_rpass.update_user_textures(&device, &queue);
+                    egui_rpass.update_buffers(&device, &queue, &paint_jobs, &screen_descriptor);
+
+                    egui_rpass.execute(
+                        &mut encoder,
+                        &view,
+                        &paint_jobs,
+                        &screen_descriptor,
+                        Some(wgpu::Color::BLACK)
+                    ).unwrap();
+
+                    gameboy_screen.draw_to_queue(&queue, &screen_texture, texture_size);
+
+                    queue.submit(std::iter::once(encoder.finish()));
+                    output.present();
                 }
                 _ => {}
             }
@@ -153,4 +252,10 @@ fn handle_inputs(keyboard_controller: &KeyboardController, input: &KeyboardInput
             winit::event::ElementState::Released => keyboard_controller.release_key(keycode),
         }
     }
+}
+
+fn resize(surface: &Surface, config: &mut wgpu::SurfaceConfiguration, device: &wgpu::Device, new_size: PhysicalSize<u32>) {
+    config.width = new_size.width;
+    config.height = new_size.height;
+    surface.configure(device, config);
 }
