@@ -14,7 +14,6 @@ tinyfiledialogs = "3.9.0"
 pollster = "0.2.5"
 egui = "0.16.1"
 egui_wgpu_backend = "0.16.0"
-egui_demo_lib = "0.16.0"
 egui_winit_platform = "0.13.0"
 epi = "0.16.0"
 
