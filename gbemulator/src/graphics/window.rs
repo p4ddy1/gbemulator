@@ -15,6 +15,8 @@ use egui_wgpu_backend::ScreenDescriptor;
 use egui_winit_platform::PlatformDescriptor;
 use epi::App;
 use std::string::String;
+use std::thread::sleep;
+use std::time::Duration;
 use wgpu::{FilterMode, Surface};
 use winit::event::KeyboardInput;
 use winit::{
@@ -25,6 +27,7 @@ use winit::{
 use winit::dpi::PhysicalSize;
 use winit::platform::run_return::EventLoopExtRunReturn;
 use lib_gbemulation::gpu::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::graphics::fps_checker::FpsChecker;
 use crate::graphics::gui::emulator_app::EmulatorApp;
 
 pub struct GraphicsWindow<'a> {
@@ -38,7 +41,6 @@ struct ExampleRepaintSignal;
 
 impl epi::backend::RepaintSignal for ExampleRepaintSignal {
     fn request_repaint(&self) {
-
     }
 }
 
@@ -88,7 +90,7 @@ impl<'a> GraphicsWindow<'a> {
 
         let mut config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: wgpu::TextureFormat::Bgra8UnormSrgb,
+            format: surface.get_preferred_format(&adapter).unwrap(),
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo
@@ -108,7 +110,7 @@ impl<'a> GraphicsWindow<'a> {
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
-                format: config.format,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
                 label: Some("Screen Texture")
             }
@@ -139,9 +141,12 @@ impl<'a> GraphicsWindow<'a> {
 
         let repaint_signal = std::sync::Arc::new(ExampleRepaintSignal{});
 
+        let mut fps_checker = FpsChecker::new(240);
+
+        let mut limit_msg_shown = false;
+
         event_loop.run_return(move |event, _, control_flow| {
             platform.handle_event(&event);
-
             self.start_emulation(&rom_filename_receiver, &emulation);
 
             match event {
@@ -170,7 +175,6 @@ impl<'a> GraphicsWindow<'a> {
                         label: Some("Render Encoder")
                     });
 
-
                     platform.begin_frame();
                     let app_output = epi::backend::AppOutput::default();
                     let mut frame =  epi::Frame::new(epi::backend::FrameData {
@@ -184,6 +188,7 @@ impl<'a> GraphicsWindow<'a> {
                         output: app_output,
                         repaint_signal: repaint_signal.clone(),
                     });
+
                     emulator_gui_app.set_tex(egui_rpass.egui_texture_from_wgpu_texture(&device, &screen_texture, FilterMode::Nearest));
 
                     emulator_gui_app.update(&platform.context(), &mut frame);
@@ -196,7 +201,6 @@ impl<'a> GraphicsWindow<'a> {
                         physical_height: config.height,
                         scale_factor: window.scale_factor() as f32,
                     };
-
 
                     egui_rpass.update_texture(&device, &queue, &platform.context().font_image());
                     egui_rpass.update_user_textures(&device, &queue);
@@ -214,6 +218,17 @@ impl<'a> GraphicsWindow<'a> {
 
                     queue.submit(std::iter::once(encoder.finish()));
                     output.present();
+
+                    fps_checker.count_frame();
+
+                    if fps_checker.should_limit_frames() {
+                        if !limit_msg_shown {
+                            println!("Running with: {} FPS. Limiting to 60", fps_checker.average_frames);
+                            limit_msg_shown = true;
+                        }
+                        let dur = Duration::from_secs_f64(1.0 / 60.0);
+                        sleep(dur);
+                    }
                 }
                 _ => {}
             }
