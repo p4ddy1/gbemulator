@@ -25,10 +25,6 @@ features = ["serialize"]
 version = "1.0.111"
 features = ["derive"]
 
-[dependencies.imgui-winit-support]
-version = "0.8.2"
-features = ["winit-26"]
-
 [dependencies.winit]
 version = "0.26.1"
 features = ["serde"]
