@@ -151,6 +151,9 @@ impl<'a> GraphicsWindow<'a> {
             match event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => {
+                        if let Some(signal_sender) = &self.emulation_signal_sender {
+                            signal_sender.send(EmulationSignal::Quit).unwrap();
+                        }
                         *control_flow = ControlFlow::Exit;
                         println!("Closing...");
                         return;
