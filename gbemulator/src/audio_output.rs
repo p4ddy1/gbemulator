@@ -1,5 +1,8 @@
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
-use cpal::{EventLoop, Format, Host, OutputBuffer, Sample, SampleFormat, StreamData, StreamId, UnknownTypeOutputBuffer};
+use cpal::{
+    EventLoop, Format, Host, OutputBuffer, Sample, SampleFormat, StreamData, StreamId,
+    UnknownTypeOutputBuffer,
+};
 use lib_gbemulation::apu::AudioOutput;
 
 use crate::EmulationSignal;
@@ -108,7 +111,9 @@ fn event_loop_runner(
     event_loop.run(move |_stream_id, stream_result| {
         let stream_data = stream_result.unwrap();
 
-        if let StreamData::Output { buffer: buffer_type } = stream_data
+        if let StreamData::Output {
+            buffer: buffer_type,
+        } = stream_data
         {
             let mut buffer = audio_buffer.lock().unwrap();
 
@@ -124,15 +129,25 @@ fn event_loop_runner(
             }
 
             match buffer_type {
-                UnknownTypeOutputBuffer::F32(mut cpal_buffer) => fill_buffer(&mut buffer, &mut cpal_buffer, 0.0),
-                UnknownTypeOutputBuffer::I16(mut cpal_buffer) => fill_buffer(&mut buffer, &mut cpal_buffer, 0 as i16),
-                UnknownTypeOutputBuffer::U16(mut cpal_buffer) => fill_buffer(&mut buffer, &mut cpal_buffer, 0 as u16)
+                UnknownTypeOutputBuffer::F32(mut cpal_buffer) => {
+                    fill_buffer(&mut buffer, &mut cpal_buffer, 0.0)
+                }
+                UnknownTypeOutputBuffer::I16(mut cpal_buffer) => {
+                    fill_buffer(&mut buffer, &mut cpal_buffer, 0 as i16)
+                }
+                UnknownTypeOutputBuffer::U16(mut cpal_buffer) => {
+                    fill_buffer(&mut buffer, &mut cpal_buffer, 0 as u16)
+                }
             }
         }
     });
 }
 
-fn fill_buffer<T: Sample>(buffer: &mut MutexGuard<AudioBuffer>, cpal_buffer: &mut OutputBuffer<T>, default: T) {
+fn fill_buffer<T: Sample>(
+    buffer: &mut MutexGuard<AudioBuffer>,
+    cpal_buffer: &mut OutputBuffer<T>,
+    default: T,
+) {
     if buffer.data.len() < cpal_buffer.len() {
         println!("Audio Buffer underrun!");
         for sample in cpal_buffer.iter_mut() {

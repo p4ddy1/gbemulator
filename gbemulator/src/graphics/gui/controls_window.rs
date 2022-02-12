@@ -36,94 +36,103 @@ impl ControlsWindow {
         }
     }
 
-    pub fn update(&mut self, ctx: &egui::CtxRef, state: &mut State, keyboard_input: Option<KeyboardInput>) {
+    pub fn update(
+        &mut self,
+        ctx: &egui::CtxRef,
+        state: &mut State,
+        keyboard_input: Option<KeyboardInput>,
+    ) {
         egui::Window::new("Controls")
             .open(&mut state.controls_window_shown)
             .show(ctx, |ui| {
-            ui.columns(4, |ui| {
-                let col1 = ui.get_mut(0).unwrap();
-                create_keyboard_input_field(
-                    &self.config,
-                    col1,
-                    &mut self.text_input_a,
-                    keyboard_input,
-                    Key::A
-                );
+                ui.columns(4, |ui| {
+                    let col1 = ui.get_mut(0).unwrap();
+                    create_keyboard_input_field(
+                        &self.config,
+                        col1,
+                        &mut self.text_input_a,
+                        keyboard_input,
+                        Key::A,
+                    );
 
-                create_keyboard_input_field(
-                    &self.config,
-                    col1,
-                    &mut self.text_input_up,
-                    keyboard_input,
-                    Key::Up
-                );
+                    create_keyboard_input_field(
+                        &self.config,
+                        col1,
+                        &mut self.text_input_up,
+                        keyboard_input,
+                        Key::Up,
+                    );
 
-                create_keyboard_input_field(
-                    &self.config,
-                    col1,
-                    &mut self.text_input_left,
-                    keyboard_input,
-                    Key::Left
-                );
+                    create_keyboard_input_field(
+                        &self.config,
+                        col1,
+                        &mut self.text_input_left,
+                        keyboard_input,
+                        Key::Left,
+                    );
 
-                create_keyboard_input_field(
-                    &self.config,
-                    col1,
-                    &mut self.text_input_start,
-                    keyboard_input,
-                    Key::Start
-                );
+                    create_keyboard_input_field(
+                        &self.config,
+                        col1,
+                        &mut self.text_input_start,
+                        keyboard_input,
+                        Key::Start,
+                    );
 
-                let col2 = ui.get_mut(1).unwrap();
+                    let col2 = ui.get_mut(1).unwrap();
 
-                create_clear_button(&self.config, col2, &mut self.text_input_a, Key::A);
-                create_clear_button(&self.config, col2, &mut self.text_input_up, Key::Up);
-                create_clear_button(&self.config, col2, &mut self.text_input_left, Key::Left);
-                create_clear_button(&self.config, col2, &mut self.text_input_start, Key::Start);
+                    create_clear_button(&self.config, col2, &mut self.text_input_a, Key::A);
+                    create_clear_button(&self.config, col2, &mut self.text_input_up, Key::Up);
+                    create_clear_button(&self.config, col2, &mut self.text_input_left, Key::Left);
+                    create_clear_button(&self.config, col2, &mut self.text_input_start, Key::Start);
 
-                let col3 = ui.get_mut(2).unwrap();
+                    let col3 = ui.get_mut(2).unwrap();
 
-                create_keyboard_input_field(
-                    &self.config,
-                    col3,
-                    &mut self.text_input_b,
-                    keyboard_input,
-                    Key::B
-                );
+                    create_keyboard_input_field(
+                        &self.config,
+                        col3,
+                        &mut self.text_input_b,
+                        keyboard_input,
+                        Key::B,
+                    );
 
-                create_keyboard_input_field(
-                    &self.config,
-                    col3,
-                    &mut self.text_input_down,
-                    keyboard_input,
-                    Key::Down
-                );
+                    create_keyboard_input_field(
+                        &self.config,
+                        col3,
+                        &mut self.text_input_down,
+                        keyboard_input,
+                        Key::Down,
+                    );
 
-                create_keyboard_input_field(
-                    &self.config,
-                    col3,
-                    &mut self.text_input_right,
-                    keyboard_input,
-                    Key::Right
-                );
+                    create_keyboard_input_field(
+                        &self.config,
+                        col3,
+                        &mut self.text_input_right,
+                        keyboard_input,
+                        Key::Right,
+                    );
 
-                create_keyboard_input_field(
-                    &self.config,
-                    col3,
-                    &mut self.text_input_select,
-                    keyboard_input,
-                    Key::Select
-                );
+                    create_keyboard_input_field(
+                        &self.config,
+                        col3,
+                        &mut self.text_input_select,
+                        keyboard_input,
+                        Key::Select,
+                    );
 
+                    let col4 = ui.get_mut(3).unwrap();
 
-                let col4 = ui.get_mut(3).unwrap();
-
-                create_clear_button(&self.config, col4, &mut self.text_input_b, Key::B);
-                create_clear_button(&self.config, col4, &mut self.text_input_down, Key::Down);
-                create_clear_button(&self.config, col4, &mut self.text_input_right, Key::Right);
-                create_clear_button(&self.config, col4, &mut self.text_input_select, Key::Select);
+                    create_clear_button(&self.config, col4, &mut self.text_input_b, Key::B);
+                    create_clear_button(&self.config, col4, &mut self.text_input_down, Key::Down);
+                    create_clear_button(&self.config, col4, &mut self.text_input_right, Key::Right);
+                    create_clear_button(
+                        &self.config,
+                        col4,
+                        &mut self.text_input_select,
+                        Key::Select,
+                    );
+                });
             });
-        });
     }
 }
 
@@ -132,7 +141,7 @@ fn create_keyboard_input_field(
     ui: &mut egui::Ui,
     text_input: &mut String,
     keyboard_input: Option<KeyboardInput>,
-    key: Key
+    key: Key,
 ) {
     ui.label(format!("{:?}", key));
 
@@ -154,7 +163,7 @@ fn create_clear_button(
     config: &Arc<RwLock<Config>>,
     ui: &mut egui::Ui,
     text_input: &mut String,
-    key: Key
+    key: Key,
 ) {
     ui.label("");
     if ui.button("[X]").clicked() {

@@ -20,8 +20,11 @@ impl MainMenu {
                     let filename_sender = self.rom_filename_sender.clone();
                     //Thread is required otherwise this will crash on Windows TODO: Check if this is still true
                     thread::spawn(move || {
-                        let filename =
-                            tinyfiledialogs::open_file_dialog("Open", "", Some((&["*.gb"], "Gameboy ROM")));
+                        let filename = tinyfiledialogs::open_file_dialog(
+                            "Open",
+                            "",
+                            Some((&["*.gb"], "Gameboy ROM")),
+                        );
                         filename_sender.send(filename).unwrap();
                     });
                     ui.close_menu();

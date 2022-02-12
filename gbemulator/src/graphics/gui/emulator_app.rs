@@ -1,13 +1,13 @@
-use std::sync::mpsc::Sender;
-use std::sync::{Arc, RwLock};
-use egui::{CtxRef, TextureId};
-use epi::Frame;
-use winit::event::KeyboardInput;
 use crate::config::config::Config;
 use crate::graphics::gui::controls_window::ControlsWindow;
 use crate::graphics::gui::main_menu::MainMenu;
 use crate::graphics::gui::palette_window::PaletteWindow;
 use crate::graphics::gui::State;
+use egui::{CtxRef, TextureId};
+use epi::Frame;
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, RwLock};
+use winit::event::KeyboardInput;
 
 pub struct EmulatorApp {
     main_menu: MainMenu,
@@ -15,7 +15,7 @@ pub struct EmulatorApp {
     palette_window: PaletteWindow,
     state: State,
     keyboard_input: Option<KeyboardInput>,
-    tex: Option<TextureId>
+    tex: Option<TextureId>,
 }
 
 impl EmulatorApp {
@@ -26,7 +26,7 @@ impl EmulatorApp {
             palette_window: PaletteWindow::new(config.clone()),
             state: State::new(),
             keyboard_input: None,
-            tex: None
+            tex: None,
         }
     }
 
@@ -45,14 +45,15 @@ impl epi::App for EmulatorApp {
             self.main_menu.update(ui, &mut self.state);
         });
 
-        self.controls_window.update(ctx, &mut self.state, self.keyboard_input);
+        self.controls_window
+            .update(ctx, &mut self.state, self.keyboard_input);
         self.palette_window.update(ctx, &mut self.state);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             match self.tex {
                 Some(t) => {
                     ui.image(t, ui.available_size());
-                },
+                }
                 None => {}
             };
         });

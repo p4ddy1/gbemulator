@@ -1,7 +1,7 @@
+use crate::config::config::Config;
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
-use crate::config::config::Config;
 
 pub const MENU_BAR_HEIGHT: i32 = 19;
 
@@ -9,7 +9,7 @@ pub struct GameboyScreen {
     buffer1: Arc<Mutex<[u8; BUFFER_SIZE]>>,
     buffer2: Arc<Mutex<[u8; BUFFER_SIZE]>>,
     current_buffer: Arc<AtomicU8>,
-    config: Arc<RwLock<Config>>
+    config: Arc<RwLock<Config>>,
 }
 
 impl GameboyScreen {
@@ -18,11 +18,16 @@ impl GameboyScreen {
             buffer1: Arc::new(Mutex::new([255; BUFFER_SIZE])),
             buffer2: Arc::new(Mutex::new([255; BUFFER_SIZE])),
             current_buffer: Arc::new(AtomicU8::new(1)),
-            config
+            config,
         }
     }
 
-    pub fn draw_to_queue(&self, queue: &wgpu::Queue, texture: &wgpu::Texture, texture_size: wgpu::Extent3d) {
+    pub fn draw_to_queue(
+        &self,
+        queue: &wgpu::Queue,
+        texture: &wgpu::Texture,
+        texture_size: wgpu::Extent3d,
+    ) {
         let current_buffer = self.current_buffer.load(Ordering::SeqCst);
 
         let pixel_data = *if current_buffer == 1 {
@@ -47,7 +52,7 @@ impl GameboyScreen {
                 texture: &texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All
+                aspect: wgpu::TextureAspect::All,
             },
             &texture_output,
             wgpu::ImageDataLayout {
@@ -55,7 +60,7 @@ impl GameboyScreen {
                 bytes_per_row: std::num::NonZeroU32::new(4 * SCREEN_WIDTH as u32),
                 rows_per_image: std::num::NonZeroU32::new(SCREEN_HEIGHT as u32),
             },
-            texture_size
+            texture_size,
         );
     }
 }
@@ -75,6 +80,11 @@ impl Screen for GameboyScreen {
 
     fn get_palette(&self) -> [[u8; 3]; 4] {
         let palette = &self.config.read().unwrap().color_palette;
-        [palette.color4, palette.color3, palette.color2, palette.color1]
+        [
+            palette.color4,
+            palette.color3,
+            palette.color2,
+            palette.color1,
+        ]
     }
 }

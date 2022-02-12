@@ -1,12 +1,12 @@
+use crate::config::color_palette::ColorPalette;
 use crate::config::controls::Controls;
 use serde::{Deserialize, Serialize};
-use crate::config::color_palette::ColorPalette;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub controls: Controls,
     #[serde(default = "ColorPalette::default")]
-    pub color_palette: ColorPalette
+    pub color_palette: ColorPalette,
 }
 
 impl Config {
@@ -25,7 +25,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             controls: Controls::default(),
-            color_palette: ColorPalette::default()
+            color_palette: ColorPalette::default(),
         }
     }
 }

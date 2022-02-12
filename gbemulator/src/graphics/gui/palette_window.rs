@@ -1,14 +1,14 @@
-use std::sync::{Arc, RwLock};
 use crate::config::color_palette::ColorPalette;
 use crate::config::config::Config;
 use crate::graphics::gui::State;
+use std::sync::{Arc, RwLock};
 
 pub struct PaletteWindow {
     config: Arc<RwLock<Config>>,
-    color1: [u8;3],
-    color2: [u8;3],
-    color3: [u8;3],
-    color4: [u8;3],
+    color1: [u8; 3],
+    color2: [u8; 3],
+    color3: [u8; 3],
+    color4: [u8; 3],
 }
 
 impl PaletteWindow {
@@ -66,8 +66,8 @@ impl PaletteWindow {
                         self.load_color_preset([
                             [34, 30, 49],
                             [65, 72, 93],
-                            [119,142,152],
-                            [197,219,212]
+                            [119, 142, 152],
+                            [197, 219, 212],
                         ]);
                     }
 
@@ -76,7 +76,7 @@ impl PaletteWindow {
                             [124, 63, 88],
                             [235, 107, 111],
                             [249, 168, 117],
-                            [255, 246, 211]
+                            [255, 246, 211],
                         ]);
                     }
                 });

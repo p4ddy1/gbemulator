@@ -491,7 +491,7 @@ impl Gpu {
         self.draw_pixel_to_buffer(x as usize, y as usize, self.color_map[pixel as usize]);
     }
 
-    fn draw_pixel_to_buffer(&mut self, x: usize, y: usize, rgb: [u8;3]) {
+    fn draw_pixel_to_buffer(&mut self, x: usize, y: usize, rgb: [u8; 3]) {
         let offset = (x * 3) + (y * SCREEN_WIDTH * 3);
 
         self.screen_buffer[offset] = rgb[0];
