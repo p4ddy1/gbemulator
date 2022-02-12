@@ -1,6 +1,7 @@
 use lib_gbemulation::gpu::{Screen, BUFFER_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
+use crate::config::config::Config;
 
 pub const MENU_BAR_HEIGHT: i32 = 19;
 
@@ -8,14 +9,16 @@ pub struct GameboyScreen {
     buffer1: Arc<Mutex<[u8; BUFFER_SIZE]>>,
     buffer2: Arc<Mutex<[u8; BUFFER_SIZE]>>,
     current_buffer: Arc<AtomicU8>,
+    config: Arc<RwLock<Config>>
 }
 
 impl GameboyScreen {
-    pub fn new() -> Self {
+    pub fn new(config: Arc<RwLock<Config>>) -> Self {
         GameboyScreen {
             buffer1: Arc::new(Mutex::new([255; BUFFER_SIZE])),
             buffer2: Arc::new(Mutex::new([255; BUFFER_SIZE])),
             current_buffer: Arc::new(AtomicU8::new(1)),
+            config
         }
     }
 
@@ -68,5 +71,10 @@ impl Screen for GameboyScreen {
         };
 
         *buffer = *screen_buffer;
+    }
+
+    fn get_palette(&self) -> [[u8; 3]; 4] {
+        let palette = &self.config.read().unwrap().color_palette;
+        [palette.color4, palette.color3, palette.color2, palette.color1]
     }
 }

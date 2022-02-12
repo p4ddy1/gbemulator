@@ -136,7 +136,7 @@ impl<'a> GraphicsWindow<'a> {
 
         let mut emulator_gui_app = EmulatorApp::new(
             rom_filename_sender,
-            Arc::clone(&self.config_storage.config)
+            &self.config_storage.config
         );
 
         let repaint_signal = std::sync::Arc::new(ExampleRepaintSignal{});

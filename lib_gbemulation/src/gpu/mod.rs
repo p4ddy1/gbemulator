@@ -17,4 +17,5 @@ pub enum Pixel {
 
 pub trait Screen {
     fn draw(&self, screen_buffer: &[u8; BUFFER_SIZE]);
+    fn get_palette(&self) -> [[u8; 3]; 4];
 }

@@ -13,7 +13,7 @@ impl MainMenu {
         }
     }
 
-    pub fn update(&mut self, ui: &mut egui::Ui, frame: &epi::Frame, state: &mut State) {
+    pub fn update(&mut self, ui: &mut egui::Ui, state: &mut State) {
         egui::menu::bar(ui, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("Open").clicked() {
@@ -24,12 +24,19 @@ impl MainMenu {
                             tinyfiledialogs::open_file_dialog("Open", "", Some((&["*.gb"], "Gameboy ROM")));
                         filename_sender.send(filename).unwrap();
                     });
+                    ui.close_menu();
                 }
             });
 
-            ui.menu_button("Controls", |ui| {
-                if ui.button("Configure").clicked() {
+            ui.menu_button("Options", |ui| {
+                if ui.button("Controls").clicked() {
                     state.controls_window_shown = true;
+                    ui.close_menu();
+                }
+
+                if ui.button("Palette").clicked() {
+                    state.palette_window_shown = true;
+                    ui.close_menu();
                 }
             });
         });

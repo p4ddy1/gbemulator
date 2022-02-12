@@ -24,7 +24,7 @@ pub fn main() {
     let mut window =
         GraphicsWindow::new(160 * 3, (144 * 3) + MENU_BAR_HEIGHT as u32, &config_storage);
 
-    let gameboy_screen = Arc::new(GameboyScreen::new());
+    let gameboy_screen = Arc::new(GameboyScreen::new(config_storage.config.clone()));
     pollster::block_on(window.start(gameboy_screen));
 
     config_storage.save_to_file().unwrap();

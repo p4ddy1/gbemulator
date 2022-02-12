@@ -49,7 +49,7 @@ pub struct Gpu {
     sprite_palette0: [u8; 4],
     sprite_palette1: [u8; 4],
     raw_palette_data: [u8; 3],
-    color_map: [(u8, u8, u8); 4],
+    color_map: [[u8; 3]; 4],
     lcd_enabled: bool,
     first_frame_after_activation: bool,
 }
@@ -76,12 +76,7 @@ impl Gpu {
             sprite_palette0: [0, 1, 2, 3],
             sprite_palette1: [0, 1, 2, 3],
             raw_palette_data: [0xFC, 0xFF, 0xFF],
-            color_map: [
-                (255, 246, 211),
-                (249, 168, 117),
-                (235, 107, 111),
-                (124, 63, 88),
-            ],
+            color_map: [[0; 3], [0; 3], [0; 3], [0; 3]],
             lcd_enabled: true,
             first_frame_after_activation: true,
         }
@@ -281,6 +276,7 @@ impl Gpu {
             return;
         }
 
+        self.color_map = self.screen.get_palette();
         self.screen.draw(&self.screen_buffer);
     }
 
@@ -495,12 +491,12 @@ impl Gpu {
         self.draw_pixel_to_buffer(x as usize, y as usize, self.color_map[pixel as usize]);
     }
 
-    fn draw_pixel_to_buffer(&mut self, x: usize, y: usize, rgb: (u8, u8, u8)) {
+    fn draw_pixel_to_buffer(&mut self, x: usize, y: usize, rgb: [u8;3]) {
         let offset = (x * 3) + (y * SCREEN_WIDTH * 3);
 
-        self.screen_buffer[offset] = rgb.0;
-        self.screen_buffer[offset + 1] = rgb.1;
-        self.screen_buffer[offset + 2] = rgb.2;
+        self.screen_buffer[offset] = rgb[0];
+        self.screen_buffer[offset + 1] = rgb[1];
+        self.screen_buffer[offset + 2] = rgb[2];
     }
 }
 

@@ -37,10 +37,6 @@ impl ControlsWindow {
     }
 
     pub fn update(&mut self, ctx: &egui::CtxRef, state: &mut State, keyboard_input: Option<KeyboardInput>) {
-        if !state.controls_window_shown {
-            return;
-        }
-
         egui::Window::new("Controls")
             .open(&mut state.controls_window_shown)
             .show(ctx, |ui| {
@@ -160,7 +156,7 @@ fn create_clear_button(
     text_input: &mut String,
     key: Key
 ) {
-    ui.label(""); //TODO: Ugly
+    ui.label("");
     if ui.button("[X]").clicked() {
         let map = &mut config.write().unwrap().controls.keyboard_map;
         map.clear_mapping_by_key(key);
