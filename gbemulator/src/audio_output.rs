@@ -1,10 +1,10 @@
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
-use cpal::{EventLoop, Format, Host, SampleFormat, StreamData, StreamId, UnknownTypeOutputBuffer};
+use cpal::{EventLoop, Format, Host, OutputBuffer, Sample, SampleFormat, StreamData, StreamId, UnknownTypeOutputBuffer};
 use lib_gbemulation::apu::AudioOutput;
 
 use crate::EmulationSignal;
 use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 
 struct AudioBuffer {
@@ -69,7 +69,7 @@ impl CpalAudioOutput {
         let format = Format {
             channels: 2,
             sample_rate: default_format.sample_rate,
-            data_type: SampleFormat::F32,
+            data_type: default_format.data_type,
         };
 
         self.sample_rate = Some(format.sample_rate.0);
@@ -108,10 +108,7 @@ fn event_loop_runner(
     event_loop.run(move |_stream_id, stream_result| {
         let stream_data = stream_result.unwrap();
 
-        if let StreamData::Output {
-            //TODO: Support integer too
-            buffer: UnknownTypeOutputBuffer::F32(mut cpal_buffer),
-        } = stream_data
+        if let StreamData::Output { buffer: buffer_type } = stream_data
         {
             let mut buffer = audio_buffer.lock().unwrap();
 
@@ -126,20 +123,27 @@ fn event_loop_runner(
                 }
             }
 
-            //We dont have enough data to satisfy the output
-            if buffer.data.len() < cpal_buffer.len() {
-                println!("Audio Buffer underrun!");
-                for sample in cpal_buffer.iter_mut() {
-                    *sample = 0.0;
-                }
-                return;
-            }
-
-            for (i, sample) in buffer.data.drain(0..cpal_buffer.len()).enumerate() {
-                cpal_buffer[i] = sample as f32 / i16::MAX as f32;
+            match buffer_type {
+                UnknownTypeOutputBuffer::F32(mut cpal_buffer) => fill_buffer(&mut buffer, &mut cpal_buffer, 0.0),
+                UnknownTypeOutputBuffer::I16(mut cpal_buffer) => fill_buffer(&mut buffer, &mut cpal_buffer, 0 as i16),
+                UnknownTypeOutputBuffer::U16(mut cpal_buffer) => fill_buffer(&mut buffer, &mut cpal_buffer, 0 as u16)
             }
         }
     });
+}
+
+fn fill_buffer<T: Sample>(buffer: &mut MutexGuard<AudioBuffer>, cpal_buffer: &mut OutputBuffer<T>, default: T) {
+    if buffer.data.len() < cpal_buffer.len() {
+        println!("Audio Buffer underrun!");
+        for sample in cpal_buffer.iter_mut() {
+            *sample = default;
+        }
+        return;
+    }
+
+    for (i, sample) in buffer.data.drain(0..cpal_buffer.len()).enumerate() {
+        cpal_buffer[i] = T::from(&sample);
+    }
 }
 
 impl AudioOutput for CpalAudioOutput {
