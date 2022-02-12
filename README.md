@@ -1,9 +1,10 @@
 # GBemulator
 ![Build](https://github.com/p4ddy1/gbemulator/workflows/Build/badge.svg?branch=master)
 
-Gameboy Emulator written from scratch in Rust. Currently under heavy development.
+Gameboy Emulator written from scratch in Rust
 
-![MarioLand2](https://cloud.lpnw.de/apps/files_sharing/publicpreview/bfkazfRm2LrL3t7?x=2560&y=966&a=true)
+![MarioLand2](https://cloud.lpnw.de/apps/files_sharing/publicpreview/Ee5piRQ624cn84c?x=2549&y=980&a=true)
+![MarioLand](https://cloud.lpnw.de/apps/files_sharing/publicpreview/cQCjwKrGMwYi7b8?x=2549&y=980&a=true)
 
 ## Status
 
@@ -33,4 +34,3 @@ Gameboy Emulator written from scratch in Rust. Currently under heavy development
 ![TimingTest](https://cloud.lpnw.de/apps/files_sharing/publicpreview/CE8dENP7JacDSN5?x=1920&y=632&a=true)
 ![Tetris](https://cloud.lpnw.de/apps/files_sharing/publicpreview/jcm8QLoHETHRFBa?x=1920&y=632&a=true)
 ![DrMario](https://cloud.lpnw.de/apps/files_sharing/publicpreview/MHNYnr2pPDrneGc?x=1920&y=632&a=true)
-![MarioLand](https://cloud.lpnw.de/apps/files_sharing/publicpreview/freAayx9sFQk7oy?x=1920&y=632&a=true)
