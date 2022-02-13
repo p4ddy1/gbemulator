@@ -1,7 +1,11 @@
 # GBemulator
 ![Build](https://github.com/p4ddy1/gbemulator/workflows/Build/badge.svg?branch=master)
 
-Gameboy Emulator written from scratch in Rust
+Gameboy Emulator written from scratch in Rust. Compatible with macOS, Linux and Windows. 
+Uses [wgpu](https://github.com/gfx-rs/wgpu) for graphics, [cpal](https://github.com/RustAudio/cpal) for audio output 
+and [egui](https://github.com/emilk/egui) for the interface. 
+Binaries for Linux and Windows are available in the release section.
+If you want to compile it from source just run `cargo build --release` or `cargo run --release`
 
 ![MarioLand2](https://cloud.lpnw.de/apps/files_sharing/publicpreview/Ee5piRQ624cn84c?x=2549&y=980&a=true)
 ![MarioLand](https://cloud.lpnw.de/apps/files_sharing/publicpreview/cQCjwKrGMwYi7b8?x=2549&y=980&a=true)
@@ -18,15 +22,14 @@ Gameboy Emulator written from scratch in Rust
 * Window
 * GUI
 * Configurable controls
+* Configurable palette
 
 
 ### Todo
 * Complete APU
 * MBC
 * Interrupts (Serial and Joypad)
-* Probably a lot i forgot
-* Fix a few graphic glitches
-* Fix a few audio glitches
+* Probably a lot I forgot
 
 ## Screenshots
 
