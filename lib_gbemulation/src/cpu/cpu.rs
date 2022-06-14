@@ -51,21 +51,6 @@ impl Cpu {
             }
         };
 
-        /* match op_code {
-            Opcode::Regular(value) => {
-                println!(
-                    "PC: 0x{:X} 0x{:X}: {}",
-                    self.registers.pc, value, instruction.description
-                );
-            }
-            Opcode::CB(value) => {
-                println!(
-                    "PC: 0x{:X} CB 0x{:X}: {}",
-                    self.registers.pc, value, instruction.description
-                );
-            }
-        }*/
-
         if self.is_halted && any_interrupt_fired(mmu) {
             self.is_halted = false;
             if !self.interrupt_master_enabled {

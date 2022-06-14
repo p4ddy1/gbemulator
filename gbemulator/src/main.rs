@@ -13,7 +13,6 @@ mod controls;
 mod emulation;
 mod graphics;
 mod savegame;
-mod screen;
 
 pub enum EmulationSignal {
     Cycle,
