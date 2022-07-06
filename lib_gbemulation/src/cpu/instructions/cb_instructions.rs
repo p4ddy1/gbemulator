@@ -336,7 +336,6 @@ pub fn get_instruction(op_code: &u8) -> Option<&Instruction> {
         0xF6 => set_hl!(6),
         0xF8..=0xFD | 0xFF => set!(7),
         0xFE => set_hl!(7),
-        _ => None,
     }
 }
 

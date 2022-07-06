@@ -1,7 +1,6 @@
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
 use cpal::{
-    EventLoop, Format, Host, OutputBuffer, Sample, SampleFormat, StreamData, StreamId,
-    UnknownTypeOutputBuffer,
+    EventLoop, Format, Host, OutputBuffer, Sample, StreamData, StreamId, UnknownTypeOutputBuffer,
 };
 use lib_gbemulation::apu::AudioOutput;
 
@@ -50,11 +49,6 @@ impl CpalAudioOutput {
             event_loop: Arc::new(event_loop),
             current_stream_id: None,
         }
-    }
-
-    pub fn get_output_device_names(&self) -> Vec<String> {
-        let devices = self.host.devices().unwrap();
-        devices.map(|dev| dev.name().unwrap()).collect()
     }
 
     pub fn get_default_device_name(&self) -> String {
