@@ -35,5 +35,3 @@ If you want to compile it from source just run `cargo build --release` or `cargo
 
 ![CpuTest](https://cloud.lpnw.de/apps/files_sharing/publicpreview/KbyxSCrXL9kKr8i?x=1920&y=632&a=true)
 ![TimingTest](https://cloud.lpnw.de/apps/files_sharing/publicpreview/CE8dENP7JacDSN5?x=1920&y=632&a=true)
-![Tetris](https://cloud.lpnw.de/apps/files_sharing/publicpreview/jcm8QLoHETHRFBa?x=1920&y=632&a=true)
-![DrMario](https://cloud.lpnw.de/apps/files_sharing/publicpreview/MHNYnr2pPDrneGc?x=1920&y=632&a=true)
